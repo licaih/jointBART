@@ -1,0 +1,6 @@
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
+importFrom(parallel, detectCores)
+importFrom(stats, ar, cor, dbinom, dnorm, lm, predict, pnorm, qnorm, qchisq, plogis, qlogis, quantile, residuals, runif, sd, coef, vcov)
+importFrom(tools, psnice)
+useDynLib(jointBART, .registration = TRUE)
