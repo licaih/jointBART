@@ -1,4 +1,6 @@
-
+# Todo
+# can remove dart part
+# add graph parameter
 JointWBart=function(
   x.train, # list of xk matrix dim: n1 X p, n2 X p, ..., nK X p
   y.train, # list of yk vector dim: n1, n2, n3
@@ -23,7 +25,7 @@ JointWBart=function(
   sigmaf=NA,
   lambda=NA,
   fmean=lapply(y.train, mean),  # vector of yk mean dim: n1, n2, n3
-  w=lapply(y.train, function(y) rep(1,length(y))),
+  w=lapply(n, function(n1) rep(1,n1)),
   ntree=200L,
   numcut=100L,
   ndpost=1000L,
@@ -42,7 +44,7 @@ JointWBart=function(
   n = sapply(y.train, length)
   K = length(y.train)
   if(!transposed) {
-    for(k in 1:length){
+    for(k in 1:K){
 
     temp = bartModelMatrix(x.train[[k]], numcut, usequants=usequants,
                            cont=cont, xinfo=xinfo[[k]], rm.const=rm.const)
