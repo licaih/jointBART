@@ -148,6 +148,7 @@ void bart::pr() //print to screen
    cout << "m: " << m << std::endl;
    cout << "t[0]:\n " << t[0] << std::endl;
    cout << "t[m-1]:\n " << t[m-1] << std::endl;
+   cout << "pv[0]:" << pv[0] << "pv[p]:"<< pv[p-1] << std::endl;
    cout << "prior and mcmc info:\n";
    pi.pr();
    if(dart){

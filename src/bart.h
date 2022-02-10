@@ -52,10 +52,16 @@ public:
    void setpi(pinfo& pi) {this->pi = pi;}
    void setprior(double alpha, double beta, double tau)
       {pi.alpha=alpha; pi.mybeta = beta; pi.tau=tau;}
-   void setdart(double _a, double _b, double _rho, bool _aug, bool _dart, 
+   void setpv(std::vector<double> _pv){
+      double sum_pv = 0.0;
+      for(size_t j=0;j<p;j++) sum_pv += _pv[j];
+      for(size_t j=0;j<p;j++) _pv[j]/= sum_pv;
+      this->pv=_pv;
+      }
+   void setdart(double _a, double _b, double _rho, bool _aug, bool _dart,
 		double _theta=0., double _omega=1.) {
-     this->a=_a; this->b=_b; this->rho=_rho; this->aug=_aug; 
-     this->dart=_dart; this->omega=_omega; 
+     this->a=_a; this->b=_b; this->rho=_rho; this->aug=_aug;
+     this->dart=_dart; this->omega=_omega;
      if(_theta==0.){
        this->const_theta=false;
        this->theta=1.;

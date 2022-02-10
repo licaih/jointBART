@@ -30,12 +30,6 @@ JointWBart=function(
   numcut=100L,
   ndpost=1000L,
   nskip=100L,
-  keepevery=1L,
-  nkeeptrain=ndpost,
-  nkeeptest=ndpost,
-  nkeeptestmean=ndpost,
-  nkeeptreedraws=ndpost,
-  printevery=100L,
   transposed=FALSE
 )
 {
@@ -85,24 +79,7 @@ JointWBart=function(
   for(k in 1:K){
     y.train[[1]] = y.train[[1]]-fmean[[1]]
   }
-  #--------------------------------------------------
-  #set nkeeps for thinning
-  if((nkeeptrain!=0) & ((ndpost %% nkeeptrain) != 0)) {
-    nkeeptrain=ndpost
-    cat('*****nkeeptrain set to ndpost\n')
-  }
-  if((nkeeptest!=0) & ((ndpost %% nkeeptest) != 0)) {
-    nkeeptest=ndpost
-    cat('*****nkeeptest set to ndpost\n')
-  }
-  if((nkeeptestmean!=0) & ((ndpost %% nkeeptestmean) != 0)) {
-    nkeeptestmean=ndpost
-    cat('*****nkeeptestmean set to ndpost\n')
-  }
-  if((nkeeptreedraws!=0) & ((ndpost %% nkeeptreedraws) != 0)) {
-    nkeeptreedraws=ndpost
-    cat('*****nkeeptreedraws set to ndpost\n')
-  }
+
   #--------------------------------------------------
   #prior: change the dimension
   #--------------------------------------------------
@@ -148,7 +125,7 @@ JointWBart=function(
               x.test,   #p*np test data x
               ntree,
               numcut,
-              ndpost*keepevery,
+              ndpost,
               nskip,
               power,
               base,
@@ -165,11 +142,6 @@ JointWBart=function(
               b,
               rho,
               augment,
-              nkeeptrain,
-              nkeeptest,
-              nkeeptestmean,
-              nkeeptreedraws,
-              printevery,
               xinfo
   )
 

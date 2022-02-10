@@ -55,6 +55,8 @@ for(k in 1:K){
   rm(temp)
 }
 
+w = lapply(n, function(n1) rep(1,n1))
+w
 ## --------------------------
 ## Test
 ## --------------------------
@@ -74,9 +76,9 @@ JointBart(n = n,
           tau = rep(0.05, 3),
           nu =  rep(0.05, 3),
           lambda = rep(0.1, 3),
-          sigest = rep(0.1, 3),
-          w = lapply(n, function(n1) rep(1,n1)),
-          dart = TRUE,
+          sigma = c(0.1,0.2,0.3),
+          w = w,
+          dart = F,
           theta = 0,
           omega = 1.0,
           igrp = 1:10,
@@ -84,11 +86,6 @@ JointBart(n = n,
           b = 1.0,
           rho = 3.0,
           aug = T,
-          keeptrain = 10,
-          keeptest = 10,
-          keeptestme = 10,
-          keeptreedraws = 10,
-          printevery = 1,
           iXinfo = xinfo
           )
 
