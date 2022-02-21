@@ -70,7 +70,7 @@ JointBart(n = n,
           m = 20,
           nc = numcut,
           nd = 1,
-          burn = 1,
+          burn = 10,
           mybeta = 2.0,
           alpha = 0.95,
           tau = rep(0.05, 3),
@@ -88,4 +88,5 @@ JointBart(n = n,
           aug = T,
           iXinfo = xinfo
           )
+
 

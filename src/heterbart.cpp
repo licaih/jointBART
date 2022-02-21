@@ -28,6 +28,8 @@ void heterbart::pr()
 //--------------------------------------------------
 void heterbart::draw(double *sigma, rn& gen)
 {
+   //cout << "sigma[20]:\n " << sigma[20] << std::endl;
+   // Rprintf( "sigma[20]%f:\n ", sigma[20]);
    for(size_t j=0;j<m;j++) {
       fit(t[j],xi,p,n,x,ftemp);
       for(size_t k=0;k<n;k++) {

@@ -61,7 +61,7 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
                const double& rho,
                const bool& aug,
                const List& iXinfo // each element is a matrix
-                 ){
+){
 
   /*
    * initialize varaible
@@ -81,10 +81,10 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
 
   arn gen; // ?????
   // sigma
-  std::vector<double*> smat(K);
+  //std::vector<double*> smat(K);
 
   // start on bart
-  std::vector<bart>  mul_bart(K);
+  std::vector<heterbart>  mul_bart(K);
   for(size_t k=0; k<K; k++){
     mul_bart[k].setm(m);
 
@@ -101,7 +101,7 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
         for(size_t j=0;j<numcut[i];j++) _xi[i][j]=Xinfo(i, j);
       }
 
-      Rprintf("_xi[0]: %.4f, _xi[]: %.4f\n", _xi[0][0], _xi[p-1][numcut[p-1]-1]);
+      //Rprintf("_xi[0]: %.4f, _xi[]: %.4f\n", _xi[0][0], _xi[p-1][numcut[p-1]-1]);
 
       mul_bart[k].setxinfo(_xi);
     }
@@ -121,20 +121,17 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
     mul_bart[k].setdata(p,n[k],ix,iy,numcut);
     mul_bart[k].setdart(a,b,rho,aug,dart,theta,omega); // can be removed
 
-    mul_bart[k].pr();
+    //mul_bart[k].pr();
 
     std::vector<double> wv(as<std::vector<double>>(w[k]));
     mul_bart[k].setw(wv);
 
-    smat[k] = &wv[0];
-    for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k]; //
-    //Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
-    //Rprintf("wmat 0:%f 3:%f \n", mul_bart[k].getw(0), mul_bart[k].getw(3));
-
+    //smat[k] = &wv[0];
+    //for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k]; //
   }
 
   /*std::stringstream treess;  //string stream to write trees to
-  treess.precision(10);*/
+   treess.precision(10);*/
 
   /*
    * MCMC
@@ -163,23 +160,26 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
      * update each graph
      */
     for(size_t k=0; k<K; k++){
-     mul_bart[k].draw(*smat[k], gen);
+      double *svec = new double[n[k]];
+      for(size_t j=0;j<n[k];j++)  svec[j] = mul_bart[k].getw(j)*sigma[k];
+      mul_bart[k].draw(svec, gen);
+      Rprintf("sigma 0:%f 3:%f \n", *svec, svec[3]);
 
       double rss=0.0,restemp=0.0;
       for(size_t j=0; j<n[k]; j++){
         //Rprintf("y %d:%f \n", j, mul_bart[k].gety(j));
         restemp=((mul_bart[k].gety(j))-mul_bart[k].f(j))/(mul_bart[k].getw(j));
         rss += restemp*restemp;
-        Rprintf("y j:%d 3:%f \n", j, mul_bart[k].gety(j));
-
-        Rprintf("f j:%d 3:%f \n", j, mul_bart[k].f(j));
-        Rprintf("w j:%d 3:%f \n", j, mul_bart[k].getw(j)); // NA values
-        Rprintf("rss k:%d 3:%f \n", k, rss);
+        //Rprintf("y j:%d 3:%f \n", j, mul_bart[k].gety(j));
+        //Rprintf("f j:%d 3:%f \n", j, mul_bart[k].f(j));
+        //Rprintf("w j:%d 3:%f \n", j, mul_bart[k].getw(j)); // NA values
+        //Rprintf("rss k:%d 3:%f \n", k, rss);
 
       }
       sigma[k] = sqrt((nu[k]*lambda[k] + rss)/gen.chi_square(n[k]+nu[k]));
-      //Rprintf("chisq k:%d 3:%f \n", k, gen.chi_square(n[k]+nu[k]));
-      Rprintf("sigma k:%d 3:%f \n", k, sigma[k]);
+      //Rprintf("sigma k:%d 3:%f \n", k, sigma[k]);
+      // Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
+
       //for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k];
       //Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
       //Rprintf("wmat 0:%f 3:%f \n", mul_bart[k].getw(0), mul_bart[k].getw(3));
