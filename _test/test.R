@@ -60,7 +60,7 @@ w
 ## --------------------------
 ## Test
 ## --------------------------
-
+set.seed(2022)
 JointBart(n = n,
           p = 10,
           np = n, #number of observations in test data
@@ -69,14 +69,14 @@ JointBart(n = n,
           xp = xp,   #p*np test data x
           m = 20,
           nc = numcut,
-          nd = 10,
-          burn = 5,
+          nd = 1,
+          burn = 1,
           mybeta = 2.0,
           alpha = 0.95,
           tau = rep(0.05, 3),
           nu =  rep(0.05, 3),
           lambda = rep(0.1, 3),
-          sigma = c(0.1,0.2,0.3),
+          sigma = c(0.1,0.15,0.2),
           w = w,
           dart = F,
           theta = 0,

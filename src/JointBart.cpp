@@ -76,8 +76,8 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
 
   //random number generation LH: May need to be modified
-  unsigned int n1=111; // additional parameters needed to call from C++
-  unsigned int n2=222;
+  //unsigned int n1=111; // additional parameters needed to call from C++
+  //unsigned int n2=222;
 
   arn gen; // ?????
   // sigma
@@ -110,11 +110,11 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
      * set other parameters
      */
     NumericVector xv(as<NumericVector>(x[k]));
-    Rprintf("xv[k]: %.4f, xv[n[k]*p-1]: %.4f\n", xv[0], xv[n[k]*p-1]);
+    //Rprintf("xv[k]: %.4f, xv[n[k]*p-1]: %.4f\n", xv[0], xv[n[k]*p-1]);
     double *ix = &xv[0];
 
     NumericVector yv(as<NumericVector>(y[k]));
-    Rprintf("yv[k]: %.4f, yv[n[k]-1]: %.4f\n", yv[0], yv[n[k]-1]);
+    //Rprintf("yv[k]: %.4f, yv[n[k]-1]: %.4f\n", yv[0], yv[n[k]-1]);
     double *iy = &yv[0];
 
     mul_bart[k].setprior(alpha,mybeta,tau[k]);
@@ -123,28 +123,35 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
 
     mul_bart[k].pr();
 
-    NumericVector wv(as<NumericVector>(w[k]));
-    for(size_t j=0;j<n[k];j++) wv[j] *= sigma[k];
+    std::vector<double> wv(as<std::vector<double>>(w[k]));
+    mul_bart[k].setw(wv);
+
     smat[k] = &wv[0];
-    Rprintf("smat 0:%f 3:%f \n", *smat[k], *(smat[k]+3));
+    for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k]; //
+    //Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
+    //Rprintf("wmat 0:%f 3:%f \n", mul_bart[k].getw(0), mul_bart[k].getw(3));
 
   }
 
   /*std::stringstream treess;  //string stream to write trees to
   treess.precision(10);*/
 
-
   /*
    * MCMC
    */
   Rprintf("\nMCMC\n");
-  std::vector<double> s = {0.2, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
-  std::vector<double> s2 = {0.4, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.2};
-  std::vector<double> s3 = {0.2, 0.01, 0.52,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
 
-  mul_bart[0].setpv(s);
-  mul_bart[1].setpv(s2);
-  mul_bart[2].setpv(s3);
+  /*
+   * test set probability vector
+   * std::vector<double> s = {0.2, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
+   std::vector<double> s2 = {0.4, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.2};
+   std::vector<double> s3 = {0.2, 0.01, 0.52,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
+
+   mul_bart[0].setpv(s);
+   mul_bart[1].setpv(s2);
+   mul_bart[2].setpv(s3);
+   */
+
 
   for(size_t iter=0;iter<(nd+burn);iter++) {
     /*
@@ -156,9 +163,26 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
      * update each graph
      */
     for(size_t k=0; k<K; k++){
-      mul_bart[k].draw(*smat[k], gen) ;//heterbart::draw(double *sigma, rn& gen) + adj
-      double rss=0.0;
+     mul_bart[k].draw(*smat[k], gen);
 
+      double rss=0.0,restemp=0.0;
+      for(size_t j=0; j<n[k]; j++){
+        //Rprintf("y %d:%f \n", j, mul_bart[k].gety(j));
+        restemp=((mul_bart[k].gety(j))-mul_bart[k].f(j))/(mul_bart[k].getw(j));
+        rss += restemp*restemp;
+        Rprintf("y j:%d 3:%f \n", j, mul_bart[k].gety(j));
+
+        Rprintf("f j:%d 3:%f \n", j, mul_bart[k].f(j));
+        Rprintf("w j:%d 3:%f \n", j, mul_bart[k].getw(j)); // NA values
+        Rprintf("rss k:%d 3:%f \n", k, rss);
+
+      }
+      sigma[k] = sqrt((nu[k]*lambda[k] + rss)/gen.chi_square(n[k]+nu[k]));
+      //Rprintf("chisq k:%d 3:%f \n", k, gen.chi_square(n[k]+nu[k]));
+      Rprintf("sigma k:%d 3:%f \n", k, sigma[k]);
+      //for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k];
+      //Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
+      //Rprintf("wmat 0:%f 3:%f \n", mul_bart[k].getw(0), mul_bart[k].getw(3));
     }
 
     /*
@@ -174,11 +198,14 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
    * end MCMC
    */
 
-  for(size_t k=0; k<K; k++){
-    Rprintf("\nEND\n");
-    mul_bart[k].pr();
+  /*
+   *   for(size_t k=0; k<K; k++){
+   Rprintf("\nEND\n");
+   mul_bart[k].pr();
+   }
+   */
 
-  }
+
 }
 
 
