@@ -81,7 +81,7 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
 
   arn gen; // ?????
   // sigma
-  //std::vector<double*> smat(K);
+  std::vector<double*> svec(K);
 
   // start on bart
   std::vector<heterbart>  mul_bart(K);
@@ -126,8 +126,8 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
     std::vector<double> wv(as<std::vector<double>>(w[k]));
     mul_bart[k].setw(wv);
 
-    //smat[k] = &wv[0];
-    //for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k]; //
+    svec[k] = new double[n[k]];
+    for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
   }
 
   /*std::stringstream treess;  //string stream to write trees to
@@ -160,10 +160,9 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
      * update each graph
      */
     for(size_t k=0; k<K; k++){
-      double *svec = new double[n[k]];
-      for(size_t j=0;j<n[k];j++)  svec[j] = mul_bart[k].getw(j)*sigma[k];
-      mul_bart[k].draw(svec, gen);
-      Rprintf("sigma 0:%f 3:%f \n", *svec, svec[3]);
+
+      mul_bart[k].draw(svec[k], gen);
+      //Rprintf("sigma 0:%f 3:%f \n", *svec[k], svec[k][5]);
 
       double rss=0.0,restemp=0.0;
       for(size_t j=0; j<n[k]; j++){
@@ -177,6 +176,8 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
 
       }
       sigma[k] = sqrt((nu[k]*lambda[k] + rss)/gen.chi_square(n[k]+nu[k]));
+      for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
+
       //Rprintf("sigma k:%d 3:%f \n", k, sigma[k]);
       // Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
 
@@ -198,12 +199,11 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
    * end MCMC
    */
 
-  /*
-   *   for(size_t k=0; k<K; k++){
-   Rprintf("\nEND\n");
-   mul_bart[k].pr();
+  for(size_t k=0; k<K; k++){
+    Rprintf("\nEND\n");
+    mul_bart[k].pr();
    }
-   */
+
 
 
 }
