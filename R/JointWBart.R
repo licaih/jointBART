@@ -1,10 +1,8 @@
-# Todo
-# can remove dart part
-# add graph parameter
+
 JointWBart=function(
   x.train, # list of xk matrix dim: n1 X p, n2 X p, ..., nK X p
   y.train, # list of yk vector dim: n1, n2, n3
-  x.test=matrix(0.0,0,0), # ignored
+  x.test=vector("list", length(y.train)), # ignored
   sparse=FALSE,
   theta=0,
   omega=1,
@@ -43,16 +41,17 @@ JointWBart=function(
     temp = bartModelMatrix(x.train[[k]], numcut, usequants=usequants,
                            cont=cont, xinfo=xinfo[[k]], rm.const=rm.const)
     x.train[[k]] = t(temp$X)
-    numcut = temp$numcut
     xinfo[[k]] = temp$xinfo
-    if(length(x.test)>0) {  # ignored
+    if(length(x.test[[k]])>0) {  # ignored
       x.test[[k]] = bartModelMatrix(x.test[[k]])
       x.test[[k]] = t(x.test[[k]][ , temp$rm.const])
+      }
     }
+    numcut = temp$numcut
     rm.const <- temp$rm.const
     grp <- temp$grp
     rm(temp)
-    }
+
   }
   else {
     rm.const <- NULL
@@ -69,7 +68,8 @@ JointWBart=function(
 
   p = p[1]
 
-  np = sapply(x.text, ncol)
+  np = try(sapply(x.test, ncol))
+  if(class(np) != "integer") np = rep(0, K)
   if(length(rho)==0) rho=p
   if(length(rm.const)==0) rm.const <- 1:p
   if(length(grp)==0) grp <- 1:p
@@ -85,14 +85,14 @@ JointWBart=function(
   #--------------------------------------------------
 
   nu=sigdf
-  if(is.na(lambda)) {
+  if(anyNA(lambda)) {
     lambda = rep(NA, K)
-    if(is.na(sigest)) {
+    if(anyNA(sigest)) {
       sigest = rep(NA, K)
       for(k in 1:K){
         if(p < n[k]) {
           df = data.frame(t(x.train[[k]]),y.train[[k]])
-          lmf = lm(y.train~.,df)
+          lmf = lm(y.train..k..~.,df)
           sigest[k] = summary(lmf)$sigma
         } else {
           sigest[k] = sd(y.train[[k]])
@@ -105,7 +105,7 @@ JointWBart=function(
     sigest=sqrt(lambda)
   }
 
-  if(is.na(sigmaf)) {
+  if(anyNA(sigmaf)) {
     sigmaf = tau = rep(NA, K)
     for(k in 1:K){
       tau[k]=(max(y.train[[k]])-min(y.train[[k]]))/(2*bk*sqrt(ntree))
@@ -116,7 +116,10 @@ JointWBart=function(
   #--------------------------------------------------
   ptm <- proc.time()
   #call
-  res = .Call("JointBart",
+  # Todo
+  # can remove dart part
+  # add graph parameter
+  res = JointBart(
               n,  #number of observations in training data
               p,  #dimension of x
               np, #number of observations in test data
@@ -148,17 +151,17 @@ JointWBart=function(
   res$proc.time <- proc.time()-ptm
 
   res$mu = fmean
-  res$yhat.train.mean = res$yhat.train.mean+fmean
-  res$yhat.train = res$yhat.train+fmean
-  res$yhat.test.mean = res$yhat.test.mean+fmean
-  res$yhat.test = res$yhat.test+fmean
-  if(nkeeptreedraws>0)
-    names(res$treedraws$cutpoints) = dimnames(x.train)[[1]]
-  dimnames(res$varcount)[[2]] = as.list(dimnames(x.train)[[1]])
-  dimnames(res$varprob)[[2]] = as.list(dimnames(x.train)[[1]])
+  #res$yhat.train.mean = res$yhat.train.mean+fmean
+  #res$yhat.train = res$yhat.train+fmean
+  #res$yhat.test.mean = res$yhat.test.mean+fmean
+  #res$yhat.test = res$yhat.test+fmean
+  # if(nkeeptreedraws>0)
+  #   names(res$treedraws$cutpoints) = dimnames(x.train)[[1]]
+  # dimnames(res$varcount)[[2]] = as.list(dimnames(x.train)[[1]])
+  # dimnames(res$varprob)[[2]] = as.list(dimnames(x.train)[[1]])
   ##res$nkeeptreedraws=nkeeptreedraws
-  res$varcount.mean <- apply(res$varcount, 2, mean)
-  res$varprob.mean <- apply(res$varprob, 2, mean)
+  res$varcount.mean <- apply(res$varcount, c(3,2), mean)
+  res$varprob.mean <- apply(res$varprob, c(3,2), mean)
   res$rm.const <- rm.const
   attr(res, 'class') <- 'wbart'
   return(res)

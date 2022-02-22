@@ -37,7 +37,7 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const size_t& p, //number of variables
-               const IntegerVector& np, // vector of sample sizes in test
+               const IntegerVector& np, // vector of sample sizes in test (need to remove)
                const List& x, //x, train, each element p x n_k
                const List& y, //y, train, each element n_k
                const List& xp, //x, test, each element p x np_k,
@@ -68,13 +68,13 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
    */
   size_t K = n.size(); // Number of graphs
   int *numcut = &nc[0];
-  int *grp = &igrp[0];
+  //int *grp = &igrp[0];
 
   double rss, restemp;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
-  arma::cube trdraw = arma::zeros<arma::cube>(nd,100,K);//
+  arma::cube trdraw = arma::zeros<arma::cube>(nd,n[2],K);//need to change
 
   //random number generation LH: May need to be modified
   //unsigned int n1=111; // additional parameters needed to call from C++

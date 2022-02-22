@@ -11,24 +11,22 @@ f = function(x){
 }
 sigma = 1.0  #y = f(x) + sigma*z , z~N(0,1)
 n = 100      #number of observations
-set.seed(99)
-x=matrix(runif(n*10),n,10) #10 variables, only first 5 matter
-Ey = f(x)
-y=Ey+sigma*rnorm(n)
 
 temp = bartModelMatrix(x, 100, usequants=F,
                        cont=F, xinfo=matrix(0.0,0,0), rm.const=T)
 temp
 
 
-n = c(40, 60, 100)
+n = c(100, 100, 100)
 
 set.seed(2022)
 x  = list(matrix(runif(n[1]*10),n[1],10),
           matrix(runif(n[2]*10),n[2],10),
           matrix(runif(n[3]*10),n[3],10))
 x
-y  = list(rnorm(n[1]), rnorm(n[2]), rnorm(n[3]))
+y  = list(f(x[[1]]) + rnorm(n[1]),
+          f(x[[2]]) + rnorm(n[2]),
+          f(x[[2]]) + rnorm(n[3]))
 y
 xp = list(matrix(runif(n[1]*10),n[1],10),
           matrix(runif(n[2]*10),n[2],10),
@@ -58,10 +56,10 @@ for(k in 1:K){
 w = lapply(n, function(n1) rep(1,n1))
 w
 ## --------------------------
-## Test
+## Test C
 ## --------------------------
 set.seed(2022)
-JointBart(n = n,
+res=JointBart(n = n,
           p = 10,
           np = n, #number of observations in test data
           x = x,   #pxn training data x
@@ -69,14 +67,14 @@ JointBart(n = n,
           xp = xp,   #p*np test data x
           m = 20,
           nc = numcut,
-          nd = 50,
-          burn = 50,
+          nd = 15000,
+          burn = 5000,
           mybeta = 2.0,
           alpha = 0.95,
-          tau = rep(0.05, 3),
-          nu =  rep(0.05, 3),
-          lambda = rep(0.1, 3),
-          sigma = c(0.1,0.15,0.2),
+          tau = rep(10, 3),
+          nu =  rep(10, 3),
+          lambda = rep(10, 3),
+          sigma = c(1,1,1),
           w = w,
           dart = F,
           theta = 0,
@@ -84,9 +82,62 @@ JointBart(n = n,
           igrp = 1:10,
           a = 0.5,
           b = 1.0,
-          rho = 3.0,
+          rho = 1.0,
           aug = T,
           iXinfo = xinfo
           )
 
+plot(res$sigma[,1])
+plot(res$sigma[,2])
+plot(res$sigma[,3])
+apply(res$varcount[,,3],2, mean)
+apply(res$varcount[,,2],2, mean)
+apply(res$varcount[,,1],2, mean)
 
+## -------------------------------
+## Test R wrapper
+## -------------------------------
+x.train = x; y.train = y; x.test=xp;
+sparse=FALSE;theta=0;omega=1; a=0.5;b=1;augment=FALSE; rho=NULL;
+xinfo=vector("list", K); usequants=FALSE; cont=FALSE;
+rm.const=TRUE;sigest=NA;sigdf=3; sigquant=.90;bk=2.0;
+power=2.0;base=.95;sigmaf=NA;lambda=NA;fmean=lapply(y.train, mean);
+w=lapply(n, function(n1) rep(1,n1));ntree=20L;numcut=30;ndpost=5000L;nskip=5000L
+transposed=FALSE
+
+f = function(x){
+  10*sin(pi*x[,1]*x[,2]) + 20*(x[,3]-.5)^2+10*x[,4]+5*x[,5]
+}
+sigma = 1.0  #y = f(x) + sigma*z , z~N(0,1)
+n = c(100, 500, 700)
+
+# set.seed(2022)
+x  = list(matrix(runif(n[1]*10),n[1],10),
+          matrix(runif(n[2]*10),n[2],10),
+          matrix(runif(n[3]*10),n[3],10))
+x
+y  = list(f(x[[1]]) + rnorm(n[1]),
+          f(x[[2]]) + rnorm(n[2]),
+          f(x[[3]]) + rnorm(n[3]))
+y
+
+K = length(y)
+K
+
+x.train = x; y.train = y;
+
+res = JointWBart(x.train, y.train, x.test=vector("list", length(y.train)),
+  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
+  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
+  rm.const=TRUE, sigest=NA, sigdf=3, sigquant=.90, bk=2.0, power=2.0, base=.95,
+  sigmaf=NA, lambda=NA, fmean=lapply(y.train, mean),
+  w=lapply(n, function(n1) rep(1,n1)),  ntree=20L, numcut=5000L, ndpost=5000L,
+  nskip=100L, transposed=FALSE
+)
+
+res$varcount.mean
+
+plot(res$varcount.mean[1,], type = "b", ylim = range(res$varcount.mean),
+     col = rep(2:1, each = 5), pch = 21)
+points(res$varcount.mean[2,], type = "b", col = rep(2:1, each = 5), pch = 22)
+points(res$varcount.mean[3,], type = "b", col = rep(2:1, each = 5), pch = 23)
