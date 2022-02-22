@@ -35,7 +35,7 @@ using namespace Rcpp;
 }*/
 
 // [[Rcpp::export]]
-void JointBart(const IntegerVector& n, // vector of sample sizes in train
+List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const size_t& p, //number of variables
                const IntegerVector& np, // vector of sample sizes in test
                const List& x, //x, train, each element p x n_k
@@ -67,13 +67,14 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
    * initialize varaible
    */
   size_t K = n.size(); // Number of graphs
-  Rprintf("K:%d\n", K);
   int *numcut = &nc[0];
   int *grp = &igrp[0];
 
-  NumericVector sdraw(nd+burn);
+  double rss, restemp;
+  arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
+  arma::cube trdraw = arma::zeros<arma::cube>(nd,100,K);//
 
   //random number generation LH: May need to be modified
   //unsigned int n1=111; // additional parameters needed to call from C++
@@ -130,6 +131,8 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
     for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
   }
 
+  std::vector<double> ivarprb (p,0.);
+  std::vector<size_t> ivarcnt (p,0);
   /*std::stringstream treess;  //string stream to write trees to
    treess.precision(10);*/
 
@@ -137,17 +140,6 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
    * MCMC
    */
   Rprintf("\nMCMC\n");
-
-  /*
-   * test set probability vector
-   * std::vector<double> s = {0.2, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
-   std::vector<double> s2 = {0.4, 0.01, 0.02,0.03,0.05,0.04,0.02, 0.05,0.09, 0.2};
-   std::vector<double> s3 = {0.2, 0.01, 0.52,0.03,0.05,0.04,0.02, 0.05,0.09, 0.3};
-
-   mul_bart[0].setpv(s);
-   mul_bart[1].setpv(s2);
-   mul_bart[2].setpv(s3);
-   */
 
 
   for(size_t iter=0;iter<(nd+burn);iter++) {
@@ -160,30 +152,35 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
      * update each graph
      */
     for(size_t k=0; k<K; k++){
-
       mul_bart[k].draw(svec[k], gen);
-      //Rprintf("sigma 0:%f 3:%f \n", *svec[k], svec[k][5]);
-
-      double rss=0.0,restemp=0.0;
+      rss=0.0,restemp=0.0;
       for(size_t j=0; j<n[k]; j++){
-        //Rprintf("y %d:%f \n", j, mul_bart[k].gety(j));
         restemp=((mul_bart[k].gety(j))-mul_bart[k].f(j))/(mul_bart[k].getw(j));
         rss += restemp*restemp;
-        //Rprintf("y j:%d 3:%f \n", j, mul_bart[k].gety(j));
-        //Rprintf("f j:%d 3:%f \n", j, mul_bart[k].f(j));
-        //Rprintf("w j:%d 3:%f \n", j, mul_bart[k].getw(j)); // NA values
-        //Rprintf("rss k:%d 3:%f \n", k, rss);
 
       }
       sigma[k] = sqrt((nu[k]*lambda[k] + rss)/gen.chi_square(n[k]+nu[k]));
       for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
+      sdraw(iter, k) = sigma[k];
+      //Rprintf("sdraw %f \n", sdraw(iter, k));
 
-      //Rprintf("sigma k:%d 3:%f \n", k, sigma[k]);
-      // Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
+      if(iter >= burn){
+        for(size_t j=0;j<n[k];j++) trdraw(iter-burn, j, k)+= mul_bart[k].f(j);
+        //Rprintf("trdraw %f \n", trdraw(iter-burn, 20, k));
+        ivarcnt = mul_bart[k].getnv();
+        ivarprb  = mul_bart[k].getpv();
 
-      //for(size_t j=0;j<n[k];j++) smat[k][j] = mul_bart[k].getw(j)*sigma[k];
-      //Rprintf("smat 0:%f 3:%f \n", smat[k][0], smat[k][3]);
-      //Rprintf("wmat 0:%f 3:%f \n", mul_bart[k].getw(0), mul_bart[k].getw(3));
+        size_t iter2=(iter-burn);
+        for(size_t j=0;j<p;j++){
+          varcnt(iter2, j, k)=ivarcnt[j];
+          //varcnt(i-burn,j)=ivarcnt[j];
+          varprb(iter2, j, k)=ivarprb[j];
+          //varprb(i-burn,j)=ivarprb[j];
+        }
+        //Rprintf("varprb %f \n", varprb(iter2, 5, k));
+        //Rprintf("varcnt %f \n", varcnt(iter2, 5, k));
+      }
+
     }
 
     /*
@@ -199,13 +196,20 @@ void JointBart(const IntegerVector& n, // vector of sample sizes in train
    * end MCMC
    */
 
-  for(size_t k=0; k<K; k++){
-    Rprintf("\nEND\n");
-    mul_bart[k].pr();
-   }
+  // for(size_t k=0; k<K; k++){
+  //   Rprintf("\nEND\n");
+  //   mul_bart[k].pr();
+  //  }
 
+  Rcpp::List ret;
+  ret["sigma"]=sdraw;
+  //ret["yhat.train.mean"]=trmean;
+  ret["yhat.train"]=trdraw;
+  //ret["varcount"]=varcount;
+  ret["varcount"]=varcnt;
+  ret["varprob"]=varprb;
 
-
+  return ret;
 }
 
 
