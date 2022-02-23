@@ -64,8 +64,8 @@ void update_relatedness(const arma::umat& adj,
   double theta_prop, sum_over_edges, log_ar;
   arma::mat Theta_prop(K,K);
 
-  for(size_t k =0; k<K;k++){
-    for(size_t kprime =0; kprime<K;kprime++){
+  for(size_t k =0; k<K-1;k++){
+    for(size_t kprime =k+1; kprime<K;kprime++){
       /*
        * Between model move
        */
@@ -85,7 +85,6 @@ void update_relatedness(const arma::umat& adj,
           2 * (theta_prop - Theta(k, kprime)) * adj(l, k) * adj(l, kprime) -
           log(mrf_C(Theta_prop, nu(l), B)));
       }
-      Rprintf("log-like%f\n", sum_over_edges);
 
       // MH ratio
       log_ar = 0.0;
@@ -93,13 +92,19 @@ void update_relatedness(const arma::umat& adj,
         log_ar = alpha_prop*(std::log(beta_prop)) - lgamma(alpha_prop) +
           lgamma(alpha) - alpha*std::log(beta) -
           (alpha - alpha_prop)*std::log(Theta(k,kprime)) +
-          sum_over_edges + std::log(1-my_w) - log(my_w);
+          (beta - beta_prop)*Theta(k, kprime) +
+          sum_over_edges + std::log(1-my_w) - std::log(my_w);
+        Rprintf("0 log_ar %d %d :%f\n, Theta(k,kprime): %f\n",
+                k, kprime, log_ar, Theta(k,kprime));
+
       }else{
         log_ar = alpha*std::log(beta) - lgamma(alpha) +
           lgamma(alpha_prop) - alpha_prop*std::log(beta_prop) +
           (alpha-alpha_prop)*std::log(theta_prop) -
           (beta-beta_prop)*theta_prop + sum_over_edges +
           std::log(my_w) - std::log(1-my_w);
+        Rprintf("!0 log_ar %d %d :%f\n", k, kprime, log_ar);
+
       }
 
       // accept or reject
@@ -131,6 +136,7 @@ void update_relatedness(const arma::umat& adj,
         log_ar = (alpha - alpha_prop)*(std::log(theta_prop) -
           std::log(Theta(k, kprime))) +
           (beta- beta_prop)*(Theta(k, kprime) - theta_prop) + sum_over_edges;
+        Rprintf("within  %d %d :%f\n", k, kprime, log_ar);
 
         // accept or reject
         if(log_ar > std::log(R::runif(0.0,1.0))){

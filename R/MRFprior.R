@@ -48,7 +48,7 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
 
   accep_gamma = accep_theta = within_model = matrix(0, K, K)
 
-  for(k in 1:K){
+  for(k in 1:(K-1)){
     for(kprime in (k+1):K){
       ## --------------------
       ## Between model move
@@ -76,6 +76,8 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
           (alpha - alpha_prop)*log(Theta[k, kprime]) +
           (beta - beta_prop)*Theta[k, kprime] + sum_over_edges +
           log(1-my_w) - log(my_w)
+        cat(sprintf("0 log_ar %f\n", log_ar));
+
 
       }else{ # 0 -> 1
         log_ar = alpha*log(beta) - lgamma(alpha) +
@@ -83,6 +85,8 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
           (alpha-alpha_prop)*log(theta_prop) -
           (beta - beta_prop)*theta_prop + sum_over_edges +
           log(my_w) - log(1-my_w)
+        cat(sprintf("!0 log_ar %f\n", log_ar));
+
       }
 
       # Accept or reject
@@ -107,11 +111,12 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
           sum_over_edges = sum_over_edges + log(mrf_C(Theta, nu[l], B)) +
             2 * (theta_prop - Theta[k, kprime]) * adj[l, k] * adj[l, kprime] -
             log(mrf_C(Theta_prop, nu[l], B))
-          }
+        }
 
         # MH ratio
         log_ar = (alpha - alpha_prop)*(log(theta_prop) - log(Theta[k, kprime])) +
           (beta- beta_prop)*(Theta[k, kprime] - theta_prop) + sum_over_edges
+        cat(sprintf("within log_ar %f\n", log_ar));
 
         # Accept or reject
         if(log_ar > log(runif(1))){
@@ -140,6 +145,7 @@ update_nu <- function(nu, adj, Theta, a, b, B){
 
   a_prop = 2
   b_prop = 4
+  p = length(nu)
 
   accep_nu = vector("numeric", length(nu))
 
@@ -158,7 +164,7 @@ update_nu <- function(nu, adj, Theta, a, b, B){
      }
   }
 
-  return(list = c(nu = nu, accep_nu = accep_nu))
+  return(list(nu = nu, accep_nu = accep_nu))
 }
 
 ## ------------------------------------------------------------------------
@@ -174,11 +180,11 @@ update_adj <- function(nu, adj, Theta){
   for(l in 1:p){
   for(k in 1:K){
       tmp1 = sum(Theta[k,-k]* adj[l,-k])
-      cat(sprintf("tmp1%f\n", tmp1))
+      #cat(sprintf("tmp1%f\n", tmp1))
       w =  exp(nu[l] + 2* tmp1)
-      cat(sprintf("w%f\n", w))
+      #cat(sprintf("w%f\n", w))
       prob[l, k] = w/(1+w)
-      cat(sprintf("prob[l, k]%d %d %f\n", l,k, prob[l, k]))
+      #cat(sprintf("prob[l, k]%d %d %f\n", l,k, prob[l, k]))
 
       adj_new[l,k] = prob[l, k] > runif(1)
     }
