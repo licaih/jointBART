@@ -47,16 +47,16 @@ double mrf_C(const arma::mat& Theta, // KxK matrix of graph similarity
 }
 
 // [[Rcpp::export]]
-void update_relatedness(const arma::umat& adj,
+void up_relatedness(const arma::mat& adj,
                         arma::mat& Theta,
                         const arma::vec& nu,
                         const double& alpha,
                         const double& beta,
                         const double& my_w,
                         const arma::mat& B,
-                        arma::umat& accep_gamma,
-                        arma::umat& accep_theta,
-                        arma::umat& within_model){
+                        arma::mat& accep_gamma,
+                        arma::mat& accep_theta,
+                        arma::mat& within_model){
   size_t K = Theta.n_rows;
   size_t p = nu.n_elem;
 
@@ -94,8 +94,8 @@ void update_relatedness(const arma::umat& adj,
           (alpha - alpha_prop)*std::log(Theta(k,kprime)) +
           (beta - beta_prop)*Theta(k, kprime) +
           sum_over_edges + std::log(1-my_w) - std::log(my_w);
-        Rprintf("0 log_ar %d %d :%f\n, Theta(k,kprime): %f\n",
-                k, kprime, log_ar, Theta(k,kprime));
+        //Rprintf("0 log_ar %d %d :%f\n, Theta(k,kprime): %f\n",
+        //        k, kprime, log_ar, Theta(k,kprime));
 
       }else{
         log_ar = alpha*std::log(beta) - lgamma(alpha) +
@@ -103,7 +103,7 @@ void update_relatedness(const arma::umat& adj,
           (alpha-alpha_prop)*std::log(theta_prop) -
           (beta-beta_prop)*theta_prop + sum_over_edges +
           std::log(my_w) - std::log(1-my_w);
-        Rprintf("!0 log_ar %d %d :%f\n", k, kprime, log_ar);
+        //Rprintf("!0 log_ar %d %d :%f\n", k, kprime, log_ar);
 
       }
 
@@ -136,7 +136,7 @@ void update_relatedness(const arma::umat& adj,
         log_ar = (alpha - alpha_prop)*(std::log(theta_prop) -
           std::log(Theta(k, kprime))) +
           (beta- beta_prop)*(Theta(k, kprime) - theta_prop) + sum_over_edges;
-        Rprintf("within  %d %d :%f\n", k, kprime, log_ar);
+        //Rprintf("within  %d %d :%f\n", k, kprime, log_ar);
 
         // accept or reject
         if(log_ar > std::log(R::runif(0.0,1.0))){
@@ -151,7 +151,7 @@ void update_relatedness(const arma::umat& adj,
 
 
 // [[Rcpp::export]]
-void update_nu(arma::vec& nu,
+void up_nu(arma::vec& nu,
                const arma::mat& adj,
                const arma::mat& Theta,
                const double& a,
@@ -181,15 +181,16 @@ void update_nu(arma::vec& nu,
 }
 
 // [[Rcpp::export]]
-List update_adj(const arma::vec& nu,
-                const arma::mat& adj,
-                const arma::mat& Theta){
+void up_adj(const arma::vec& nu,
+                arma::mat& adj,
+                const arma::mat& Theta,
+                arma::mat& prob){
   // create a new adj, not change within each step... need to check
   arma::uword p = nu.n_elem;
   arma::uword K = Theta.n_rows;
   double w, tmp1;
-  arma::mat prob    = arma::zeros<arma::mat>(p, K);
-  arma::mat adj_new = adj;
+  //arma::mat prob    = arma::zeros<arma::mat>(p, K);
+  //arma::mat adj_new = adj;
 
   for(arma::uword l=0;l<p;l++){
     for(arma::uword k =0; k<K;k++){
@@ -199,20 +200,21 @@ List update_adj(const arma::vec& nu,
       //Rprintf("w:%.4f\n", w);
       prob(l,k) = w/(1+w);
       //Rprintf(" prop(l,k):%d %d %.4f\n",l,k,  prob(l,k));
+      //Rprintf("runif %f\n", R::runif(0.0, 1.0));
 
       if(prob(l,k) > R::runif(0.0, 1.0)){
-        adj_new(l,k) = 1;
+        adj(l,k) = 1;
       }else{
-        adj_new(l,k) = 0;
+        adj(l,k) = 0;
       }
-      //Rprintf("adj(l,k):%.4f\n", adj_new(l,k));
+      Rprintf("adj[%d+1,%d+1]: %f \n", l,k, adj(l,k) );
     }
   }
-  Rcpp::List ret;
-  ret["adj"]=adj_new;
-  ret["prob"]=prob;
+  //Rcpp::List ret;
+  //ret["adj"]=adj_new;
+  //ret["prob"]=prob;
 
-  return ret;
+  //return ret;
 }
 
 
@@ -242,8 +244,16 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const double& b,
                const double& rho,
                const bool& aug,
-               const List& iXinfo // each element is a matrix
-){
+               const List& iXinfo, // each element is a matrix
+               arma::mat& Theta, // graph similarity
+               arma::mat& adj,
+               arma::vec& graph_nu,
+               const arma::mat& B, // combitorial of edge inclusion
+               const double& graph_alpha,
+               const double& graph_beta,
+               const double& my_w,
+               const double& graph_a,
+               const double& graph_b){
 
   /*
    * initialize varaible
@@ -257,6 +267,12 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
   arma::cube trdraw = arma::zeros<arma::cube>(nd,n[2],K);//need to change
+
+  arma::mat accep_gamma  = arma::zeros<arma::mat>(K, K);
+  arma::mat accep_theta  = arma::zeros<arma::mat>(K, K);
+  arma::mat within_model = arma::zeros<arma::mat>(K, K);
+  arma::vec accep_nu     = arma::zeros<arma::vec>(p);
+  arma::mat prob         = arma::zeros<arma::mat>(p, K);
 
   //random number generation LH: May need to be modified
   //unsigned int n1=111; // additional parameters needed to call from C++
@@ -328,7 +344,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * update probability of G/adj
      */
-
+    up_adj(graph_nu, adj, Theta, prob);
 
     /*
      * update each graph
@@ -368,10 +384,16 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * reladeness
      */
-
+    up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
+                       B, accep_gamma, accep_theta, within_model);
     /*
-     * edge
+     * edge-specific
      */
+    up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
+
+
+    //record nu, adj, Theta
+
   }
 
   /*

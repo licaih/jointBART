@@ -76,7 +76,8 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
           (alpha - alpha_prop)*log(Theta[k, kprime]) +
           (beta - beta_prop)*Theta[k, kprime] + sum_over_edges +
           log(1-my_w) - log(my_w)
-        cat(sprintf("0 log_ar %f\n", log_ar));
+        #cat(sprintf("0 log_ar %f\n Theta(k,kprime): %f\n",
+        #            log_ar, Theta[k, kprime]));
 
 
       }else{ # 0 -> 1
@@ -85,7 +86,7 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
           (alpha-alpha_prop)*log(theta_prop) -
           (beta - beta_prop)*theta_prop + sum_over_edges +
           log(my_w) - log(1-my_w)
-        cat(sprintf("!0 log_ar %f\n", log_ar));
+        #cat(sprintf("!0 log_ar %f\n", log_ar));
 
       }
 
@@ -116,7 +117,7 @@ update_relatedness <- function(adj, Theta, nu, alpha, beta, my_w, B){
         # MH ratio
         log_ar = (alpha - alpha_prop)*(log(theta_prop) - log(Theta[k, kprime])) +
           (beta- beta_prop)*(Theta[k, kprime] - theta_prop) + sum_over_edges
-        cat(sprintf("within log_ar %f\n", log_ar));
+        #cat(sprintf("within log_ar %f\n", log_ar));
 
         # Accept or reject
         if(log_ar > log(runif(1))){
@@ -176,7 +177,6 @@ update_adj <- function(nu, adj, Theta){
   K       = nrow(Theta)
   p       = length(nu)
   prob    = matrix(NA, nrow = p, ncol = K)
-  adj_new = adj
   for(l in 1:p){
   for(k in 1:K){
       tmp1 = sum(Theta[k,-k]* adj[l,-k])
@@ -185,9 +185,9 @@ update_adj <- function(nu, adj, Theta){
       #cat(sprintf("w%f\n", w))
       prob[l, k] = w/(1+w)
       #cat(sprintf("prob[l, k]%d %d %f\n", l,k, prob[l, k]))
-
-      adj_new[l,k] = prob[l, k] > runif(1)
+      print( runif(1))
+      adj[l,k] = prob[l, k] > runif(1, 0, 1)
     }
   }
-  return(list(prob = prob, adj = adj_new))
+  return(list(prob = prob, adj = adj))
 }

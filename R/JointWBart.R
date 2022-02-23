@@ -2,6 +2,15 @@
 JointWBart=function(
   x.train, # list of xk matrix dim: n1 X p, n2 X p, ..., nK X p
   y.train, # list of yk vector dim: n1, n2, n3
+  Theta,
+  adj,
+  graph_nu,
+  B,
+  graph_alpha,
+  graph_beta,
+  my_w,
+  graph_a,
+  graph_b,
   x.test=vector("list", length(y.train)), # ignored
   sparse=FALSE,
   theta=0,
@@ -145,7 +154,16 @@ JointWBart=function(
               b,
               rho,
               augment,
-              xinfo
+              xinfo,
+              Theta,
+              adj,
+              graph_nu,
+              B,
+              graph_alpha,
+              graph_beta,
+              my_w,
+              graph_a,
+              graph_b
   )
 
   res$proc.time <- proc.time()-ptm
