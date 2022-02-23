@@ -28,11 +28,187 @@
 
 using namespace Rcpp;
 
+// [[Rcpp::depends(RcppArmadillo)]]
 
-/*void JointBart(){ //multiple class of bart done
+// [[Rcpp::export]]
+double mrf_C(const arma::mat& Theta, // KxK matrix of graph similarity
+             const double& nui,// p vec of edge-specific prior
+             const arma::mat& B // combination of edge inclusion
+){
+  double mrf_C = 0.0;
+  double tmp2, tmp3;
+
+  for(arma::uword i=0;i<B.n_rows;i++){
+    tmp3 = accu(B.row(i));
+    tmp2 = as_scalar( B.row(i)*Theta*B.row(i).t());
+    mrf_C += std::exp(nui*tmp3+tmp2) ;
+  }
+  return mrf_C;
+}
+
+// [[Rcpp::export]]
+void update_relatedness(const arma::umat& adj,
+                        arma::mat& Theta,
+                        const arma::vec& nu,
+                        const double& alpha,
+                        const double& beta,
+                        const double& my_w,
+                        const arma::mat& B,
+                        arma::umat& accep_gamma,
+                        arma::umat& accep_theta,
+                        arma::umat& within_model){
+  size_t K = Theta.n_rows;
+  size_t p = nu.n_elem;
+
+  double alpha_prop = 1.0, beta_prop = 1.0;
+  double theta_prop, sum_over_edges, log_ar;
+  arma::mat Theta_prop(K,K);
+
+  for(size_t k =0; k<K;k++){
+    for(size_t kprime =0; kprime<K;kprime++){
+      /*
+       * Between model move
+       */
+      if(Theta(k, kprime) == 0.0 ){
+        theta_prop = R::rgamma(alpha_prop, 1.0/beta_prop);
+      }else{
+        theta_prop = 0.0;
+      }
+      Theta_prop = Theta;
+      Theta_prop(k, kprime) = theta_prop;
+      Theta_prop(kprime, k) = theta_prop;
+
+      // log likelihood
+      sum_over_edges = 0.0;
+      for(size_t l=0;l<p;l++){
+        sum_over_edges += (std::log(mrf_C(Theta, nu(l), B)) +
+          2 * (theta_prop - Theta(k, kprime)) * adj(l, k) * adj(l, kprime) -
+          log(mrf_C(Theta_prop, nu(l), B)));
+      }
+      Rprintf("log-like%f\n", sum_over_edges);
+
+      // MH ratio
+      log_ar = 0.0;
+      if(theta_prop == 0.0){
+        log_ar = alpha_prop*(std::log(beta_prop)) - lgamma(alpha_prop) +
+          lgamma(alpha) - alpha*std::log(beta) -
+          (alpha - alpha_prop)*std::log(Theta(k,kprime)) +
+          sum_over_edges + std::log(1-my_w) - log(my_w);
+      }else{
+        log_ar = alpha*std::log(beta) - lgamma(alpha) +
+          lgamma(alpha_prop) - alpha_prop*std::log(beta_prop) +
+          (alpha-alpha_prop)*std::log(theta_prop) -
+          (beta-beta_prop)*theta_prop + sum_over_edges +
+          std::log(my_w) - std::log(1-my_w);
+      }
+
+      // accept or reject
+      if(log_ar > std::log(R::runif(0.0,1.0))){
+        Theta(k, kprime) = theta_prop;
+        Theta(kprime, k) = theta_prop;
+        accep_gamma(k, kprime) += 1;
+      }
+
+      /*
+       * within model move
+       */
+      if(Theta(k, kprime) != 0){
+        within_model(k, kprime) += 1;
+        theta_prop = R::rgamma(alpha_prop, 1.0/beta_prop);
+        Theta_prop = Theta;
+        Theta_prop(k, kprime) = theta_prop;
+        Theta_prop(kprime, k) = theta_prop;
+
+        //log-likelihood
+        sum_over_edges = 0.0;
+        for(size_t l=0;l<p;l++){
+          sum_over_edges += (std::log(mrf_C(Theta, nu(l), B)) +
+            2 * (theta_prop - Theta(k, kprime)) * adj(l, k) * adj(l, kprime) -
+            std::log(mrf_C(Theta_prop, nu(l), B)));
+        }
+
+        // MH ratio
+        log_ar = (alpha - alpha_prop)*(std::log(theta_prop) -
+          std::log(Theta(k, kprime))) +
+          (beta- beta_prop)*(Theta(k, kprime) - theta_prop) + sum_over_edges;
+
+        // accept or reject
+        if(log_ar > std::log(R::runif(0.0,1.0))){
+          Theta(k, kprime) = theta_prop;
+          Theta(kprime, k) = theta_prop;
+          accep_theta(k, kprime) += 1;
+        }
+      }
+    }
+  }
+}
 
 
-}*/
+// [[Rcpp::export]]
+void update_nu(arma::vec& nu,
+               const arma::mat& adj,
+               const arma::mat& Theta,
+               const double& a,
+               const double& b,
+               const arma::mat& B,
+               arma::vec& accep_nu){
+  double a_prop = 2.0, b_prop = 4.0;
+  double qu, nu_prop, log_ar;
+  size_t p = nu.n_elem;
+
+  for(size_t l=0;l<p;l++){
+    qu =  R::rgamma(a_prop, 1.0/b_prop);
+    nu_prop = std::log(qu) - std::log(1-qu);
+
+    log_ar = (nu_prop - nu(l))*std::log(a - a_prop + sum(adj.row(l))) +
+      std::log(mrf_C(Theta, nu(l),B)) +
+      (a+b-a_prop-b_prop)*(std::log(1+std::exp(nu(l)))-
+      std::log(1+std::exp(nu_prop))) -
+      std::log(mrf_C(Theta, nu_prop, B));
+
+    if(log_ar > std::log(R::runif(0.0,1.0))){
+      nu(l) = nu_prop;
+      accep_nu(l) += 1;
+    }
+
+  }
+}
+
+// [[Rcpp::export]]
+List update_adj(const arma::vec& nu,
+                const arma::mat& adj,
+                const arma::mat& Theta){
+  // create a new adj, not change within each step... need to check
+  arma::uword p = nu.n_elem;
+  arma::uword K = Theta.n_rows;
+  double w, tmp1;
+  arma::mat prob    = arma::zeros<arma::mat>(p, K);
+  arma::mat adj_new = adj;
+
+  for(arma::uword l=0;l<p;l++){
+    for(arma::uword k =0; k<K;k++){
+      tmp1 = accu(Theta.row(k) % adj.row(l)) - Theta(k,k)*adj(l,k);
+      //Rprintf("tmp1:%.4f\n", tmp1);
+      w = std::exp(nu(l) + 2*tmp1);
+      //Rprintf("w:%.4f\n", w);
+      prob(l,k) = w/(1+w);
+      //Rprintf(" prop(l,k):%d %d %.4f\n",l,k,  prob(l,k));
+
+      if(prob(l,k) > R::runif(0.0, 1.0)){
+        adj_new(l,k) = 1;
+      }else{
+        adj_new(l,k) = 0;
+      }
+      //Rprintf("adj(l,k):%.4f\n", adj_new(l,k));
+    }
+  }
+  Rcpp::List ret;
+  ret["adj"]=adj_new;
+  ret["prob"]=prob;
+
+  return ret;
+}
+
 
 // [[Rcpp::export]]
 List JointBart(const IntegerVector& n, // vector of sample sizes in train

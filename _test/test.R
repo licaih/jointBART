@@ -109,7 +109,7 @@ f = function(x){
   10*sin(pi*x[,1]*x[,2]) + 20*(x[,3]-.5)^2+10*x[,4]+5*x[,5]
 }
 sigma = 1.0  #y = f(x) + sigma*z , z~N(0,1)
-n = c(100, 500, 700)
+n = c(50, 70, 100)
 
 # set.seed(2022)
 x  = list(matrix(runif(n[1]*10),n[1],10),
@@ -131,13 +131,13 @@ res = JointWBart(x.train, y.train, x.test=vector("list", length(y.train)),
   xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
   rm.const=TRUE, sigest=NA, sigdf=3, sigquant=.90, bk=2.0, power=2.0, base=.95,
   sigmaf=NA, lambda=NA, fmean=lapply(y.train, mean),
-  w=lapply(n, function(n1) rep(1,n1)),  ntree=20L, numcut=5000L, ndpost=5000L,
+  w=lapply(n, function(n1) rep(1,n1)),  ntree=10L, numcut=5000L, ndpost=5000L,
   nskip=100L, transposed=FALSE
 )
 
-res$varcount.mean
+pip = apply(res$varcount>0, c(3,2), mean)
 
-plot(res$varcount.mean[1,], type = "b", ylim = range(res$varcount.mean),
+plot(pip[1,], type = "b", ylim =c(0,1),
      col = rep(2:1, each = 5), pch = 21)
-points(res$varcount.mean[2,], type = "b", col = rep(2:1, each = 5), pch = 22)
-points(res$varcount.mean[3,], type = "b", col = rep(2:1, each = 5), pch = 23)
+points(pip[2,], type = "b", col = rep(2:1, each = 5), pch = 22)
+points(pip[3,], type = "b", col = rep(2:1, each = 5), pch = 23)

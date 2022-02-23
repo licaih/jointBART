@@ -5,17 +5,16 @@ B = function(K){
   return(data.matrix(expand.grid(replicate(K, 0:1, simplify = FALSE))))
 }
 
-mrf_C <- function(Theta, nu, B){
+mrf_C <- function(Theta, nui, B){
   ## Input
   ## Theta: graph similarity
   ## nu: edge specific prior
   ##
   mrf_C = 0
-  K = ncol(Theta)
 
   for(i in 1:nrow(B)){
     g_ij = B[i, ,drop = F]
-    mrf_C = mrf_C + exp(nu*sum(g_ij) + as.numeric(g_ij%*%Theta%*%t(g_ij))) # C
+    mrf_C = mrf_C + exp(nui*sum(g_ij) + as.numeric(g_ij%*%Theta%*%t(g_ij))) # C
   }
   return(mrf_C)
 }
@@ -168,16 +167,21 @@ update_nu <- function(nu, adj, Theta, a, b, B){
 
 update_adj <- function(nu, adj, Theta){
 
-  K = nrow(Theta)
-  p = length(nu)
-  prob = matrix(NA, nrow = p, ncol = K)
+  K       = nrow(Theta)
+  p       = length(nu)
+  prob    = matrix(NA, nrow = p, ncol = K)
+  adj_new = adj
+  for(l in 1:p){
   for(k in 1:K){
-    for(l in 1:p){
-      w =  exp(nu[l] + 2* sum(Theta[k,-k]* adj[l,-k]))
+      tmp1 = sum(Theta[k,-k]* adj[l,-k])
+      cat(sprintf("tmp1%f\n", tmp1))
+      w =  exp(nu[l] + 2* tmp1)
+      cat(sprintf("w%f\n", w))
       prob[l, k] = w/(1+w)
+      cat(sprintf("prob[l, k]%d %d %f\n", l,k, prob[l, k]))
 
-     adj[l,k] = ifelse(prob[l, k] > runif(1), 1, 0)
+      adj_new[l,k] = prob[l, k] > runif(1)
     }
   }
-  return(list(prob = prob, adj = adj))
+  return(list(prob = prob, adj = adj_new))
 }
