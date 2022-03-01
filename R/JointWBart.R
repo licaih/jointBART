@@ -5,7 +5,6 @@ JointWBart=function(
   Theta,
   adj,
   graph_nu,
-  B,
   graph_alpha,
   graph_beta,
   my_w,
@@ -37,13 +36,18 @@ JointWBart=function(
   numcut=100L,
   ndpost=1000L,
   nskip=100L,
-  transposed=FALSE
+  transposed=FALSE,
+  Joint = T
 )
 {
   #--------------------------------------------------
   #data
+
   n = sapply(y.train, length)
   K = length(y.train)
+
+  B = data.matrix(expand.grid(replicate(K, 0:1, simplify = FALSE)))
+
   if(!transposed) {
     for(k in 1:K){
 
@@ -86,7 +90,7 @@ JointWBart=function(
   ##if(p>1 & length(numcut)==1) numcut=rep(numcut, p)
 
   for(k in 1:K){
-    y.train[[1]] = y.train[[1]]-fmean[[1]]
+    y.train[[k]] = y.train[[k]]-fmean[[k]]
   }
 
   #--------------------------------------------------
@@ -163,12 +167,18 @@ JointWBart=function(
               graph_beta,
               my_w,
               graph_a,
-              graph_b
+              graph_b,
+              Joint
   )
 
   res$proc.time <- proc.time()-ptm
 
   res$mu = fmean
+  res$yhat.train.mean = list()
+  for(k in 1:K){
+    res$yhat.train[,,k] = res$yhat.train[,1:n[k],k]+fmean[[k]]
+    res$yhat.train.mean[[k]] = apply(res$yhat.train[,,k],2, mean)
+  }
   #res$yhat.train.mean = res$yhat.train.mean+fmean
   #res$yhat.train = res$yhat.train+fmean
   #res$yhat.test.mean = res$yhat.test.mean+fmean

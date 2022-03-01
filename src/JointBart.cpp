@@ -207,7 +207,7 @@ void up_adj(const arma::vec& nu,
       }else{
         adj(l,k) = 0;
       }
-      Rprintf("adj[%d+1,%d+1]: %f \n", l,k, adj(l,k) );
+      //Rprintf("adj[%d+1,%d+1]: %f \n", l,k, adj(l,k) );
     }
   }
   //Rcpp::List ret;
@@ -253,7 +253,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const double& graph_beta,
                const double& my_w,
                const double& graph_a,
-               const double& graph_b){
+               const double& graph_b,
+               const bool& Joint){
 
   /*
    * initialize varaible
@@ -266,13 +267,17 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
-  arma::cube trdraw = arma::zeros<arma::cube>(nd,n[2],K);//need to change
+  arma::cube trdraw = arma::zeros<arma::cube>(nd,max(n),K);//need to change
 
   arma::mat accep_gamma  = arma::zeros<arma::mat>(K, K);
   arma::mat accep_theta  = arma::zeros<arma::mat>(K, K);
   arma::mat within_model = arma::zeros<arma::mat>(K, K);
   arma::vec accep_nu     = arma::zeros<arma::vec>(p);
   arma::mat prob         = arma::zeros<arma::mat>(p, K);
+
+  arma::cube theta_all = arma::zeros<arma::cube>(nd,K,K);
+  arma::cube adj_all   = arma::zeros<arma::cube>(nd,p,K);
+  arma::mat nu_all     = arma::zeros<arma::mat>(nd,p);
 
   //random number generation LH: May need to be modified
   //unsigned int n1=111; // additional parameters needed to call from C++
@@ -281,7 +286,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arn gen; // ?????
   // sigma
   std::vector<double*> svec(K);
-
+  std::vector<double>  probvec(p);
   // start on bart
   std::vector<heterbart>  mul_bart(K);
   for(size_t k=0; k<K; k++){
@@ -344,12 +349,26 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * update probability of G/adj
      */
-    up_adj(graph_nu, adj, Theta, prob);
+    if(iter == burn && Joint){
+      accep_gamma.zeros();
+      accep_theta.zeros();
+      within_model.zeros();
+      accep_nu.zeros();
+    }
+    if(Joint) up_adj(graph_nu, adj, Theta, prob);
 
     /*
      * update each graph
      */
     for(size_t k=0; k<K; k++){
+      if(Joint){
+        arma::vec prob1 = prob.col(k);
+        probvec = arma::conv_to<std::vector<double>>::from(prob1);
+        // update prob vector
+        mul_bart[k].setpv(probvec);
+
+      }
+
       mul_bart[k].draw(svec[k], gen);
       rss=0.0,restemp=0.0;
       for(size_t j=0; j<n[k]; j++){
@@ -384,26 +403,33 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * reladeness
      */
-    up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
+    if(Joint) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
                        B, accep_gamma, accep_theta, within_model);
     /*
      * edge-specific
      */
-    up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
+    if(Joint) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
 
 
     //record nu, adj, Theta
+    if(iter >= burn && Joint){
+      size_t iter2=(iter-burn);
+
+      theta_all.row(iter2) = Theta;
+      adj_all.row(iter2)   = adj;
+      nu_all.row(iter2)    = graph_nu.t();
+    }
 
   }
 
   /*
    * end MCMC
    */
-
+  Rprintf("\nEND\n");
   // for(size_t k=0; k<K; k++){
   //   Rprintf("\nEND\n");
   //   mul_bart[k].pr();
-  //  }
+  // }
 
   Rcpp::List ret;
   ret["sigma"]=sdraw;
@@ -412,6 +438,11 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   //ret["varcount"]=varcount;
   ret["varcount"]=varcnt;
   ret["varprob"]=varprb;
+  if(Joint){
+    ret["theta_all"]=theta_all;
+    ret["adj_all"]=adj_all;
+    ret["nu_all"]=nu_all;
+  }
 
   return ret;
 }
