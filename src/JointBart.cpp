@@ -75,8 +75,11 @@ void up_relatedness(const arma::mat& adj,
         theta_prop = 0.0;
       }
       Theta_prop = Theta;
+      //Rprintf("Theta(k, kprime) %.4f \n",Theta(k, kprime));
       Theta_prop(k, kprime) = theta_prop;
       Theta_prop(kprime, k) = theta_prop;
+      //Rprintf("Theta_prop(k, kprime) %.4f \n",Theta_prop(k, kprime));
+      //Rprintf("Theta(k, kprime) %.4f\n",Theta(k, kprime));
 
       // log likelihood
       sum_over_edges = 0.0;
@@ -180,43 +183,6 @@ void up_nu(arma::vec& nu,
   }
 }
 
-// [[Rcpp::export]]
-void up_adj(const arma::vec& nu,
-                arma::mat& adj,
-                const arma::mat& Theta,
-                arma::mat& prob){
-  // create a new adj, not change within each step... need to check
-  arma::uword p = nu.n_elem;
-  arma::uword K = Theta.n_rows;
-  double w, tmp1;
-  //arma::mat prob    = arma::zeros<arma::mat>(p, K);
-  //arma::mat adj_new = adj;
-
-  for(arma::uword l=0;l<p;l++){
-    for(arma::uword k =0; k<K;k++){
-      tmp1 = accu(Theta.row(k) % adj.row(l)) - Theta(k,k)*adj(l,k);
-      //Rprintf("tmp1:%.4f\n", tmp1);
-      w = std::exp(nu(l) + 2*tmp1);
-      //Rprintf("w:%.4f\n", w);
-      prob(l,k) = w/(1+w);
-      //Rprintf(" prop(l,k):%d %d %.4f\n",l,k,  prob(l,k));
-      //Rprintf("runif %f\n", R::runif(0.0, 1.0));
-
-      if(prob(l,k) > R::runif(0.0, 1.0)){
-        adj(l,k) = 1;
-      }else{
-        adj(l,k) = 0;
-      }
-      //Rprintf("adj[%d+1,%d+1]: %f \n", l,k, adj(l,k) );
-    }
-  }
-  //Rcpp::List ret;
-  //ret["adj"]=adj_new;
-  //ret["prob"]=prob;
-
-  //return ret;
-}
-
 
 // [[Rcpp::export]]
 List JointBart(const IntegerVector& n, // vector of sample sizes in train
@@ -263,7 +229,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   int *numcut = &nc[0];
   //int *grp = &igrp[0];
 
-  double rss, restemp;
+  double rss, restemp, adjprobtmp, adjprob, adj_prop, log_pi, log_ar, diffg;
+  int totalcnt;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
@@ -273,8 +240,11 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::mat accep_theta  = arma::zeros<arma::mat>(K, K);
   arma::mat within_model = arma::zeros<arma::mat>(K, K);
   arma::vec accep_nu     = arma::zeros<arma::vec>(p);
-  arma::mat prob         = arma::zeros<arma::mat>(p, K);
-
+  arma::mat prob         = arma::ones<arma::mat>(p, K);
+  prob=prob/p;
+  //arma::mat adj          = arma::zeros<arma::mat>(p, K); //
+  arma::vec prob_prop    = arma::zeros<arma::vec>(p);
+  arma::vec prob1        = arma::zeros<arma::vec>(p);
   arma::cube theta_all = arma::zeros<arma::cube>(nd,K,K);
   arma::cube adj_all   = arma::zeros<arma::cube>(nd,p,K);
   arma::mat nu_all     = arma::zeros<arma::mat>(nd,p);
@@ -287,6 +257,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   // sigma
   std::vector<double*> svec(K);
   std::vector<double>  probvec(p);
+  std::vector<double>  prob_tmp(K);
   // start on bart
   std::vector<heterbart>  mul_bart(K);
   for(size_t k=0; k<K; k++){
@@ -346,23 +317,92 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
 
 
   for(size_t iter=0;iter<(nd+burn);iter++) {
-    /*
-     * update probability of G/adj
-     */
+
     if(iter == burn && Joint){
       accep_gamma.zeros();
       accep_theta.zeros();
       within_model.zeros();
       accep_nu.zeros();
     }
-    if(Joint) up_adj(graph_nu, adj, Theta, prob);
 
     /*
      * update each graph
      */
     for(size_t k=0; k<K; k++){
-      if(Joint){
-        arma::vec prob1 = prob.col(k);
+      if(Joint && iter > burn/2){
+        /*
+         * update probability of G/adj
+         * Gk and Gk_prime only differs in edge l
+         */
+        for(arma::uword l=0;l<p;l++){
+          adjprobtmp = arma::accu(Theta.row(k) % adj.row(l)) -
+            Theta(k,k)*adj(l,k);
+          // Rprintf("adjprobtmp:%.4f\n", adjprobtmp);
+          adjprobtmp = graph_nu(l) + 2.*adjprobtmp;
+          adjprob    =   std::exp(adjprobtmp);
+          adjprob    = adjprob/(1.+adjprob);
+          // Rprintf("adjprob:%.4f\n", adjprob);
+          // Rprintf("prob :%.4f\n", prob(l,k));
+
+          //adjprob = 0.4;
+          if(adjprob > R::runif(0.0, 1.0)){
+            adj_prop = 1;
+          }else{
+            adj_prop = 0;
+          }
+          // Rprintf("adj_propose:%.4f\n", adj_prop);
+          if(adj(l,k) != adj_prop){
+
+            // prob_prop    = prob.col(k);
+            // prob_prop[l] = adjprob;
+            // //Rprintf("! old:%.4f\n", prob(l,k));
+            // //Rprintf("! new:%.4f\n", prob_prop[l]);
+            diffg = adj_prop - adj(l,k);
+            // Rprintf("! diff:%.4f\n",diffg);
+            log_pi = 0.0;
+            for(size_t kprime=0;kprime<K;kprime++){
+              //if(kprime == k) continue;
+              totalcnt = 0;
+              ivarcnt  = mul_bart[kprime].getnv();
+              for(size_t j=0;j<p;j++){
+                totalcnt += ivarcnt[j];
+              }
+
+              prob_prop    = prob.col(kprime);
+              prob_prop(l) = std::exp(graph_nu(l) +
+                2.*(arma::accu(Theta.row(kprime) % adj.row(l)) -
+                Theta(kprime,kprime)*adj(l,kprime) ));
+              prob_prop(l)  = prob_prop(l)/(1.+prob_prop(l) );
+              prob_tmp[kprime] = prob_prop(l);
+              // probability of selected variables in tree
+              log_pi += totalcnt*(std::log(arma::accu(prob.col(kprime))) -
+                std::log(arma::accu(prob_prop))) +
+                ivarcnt[l]*(std::log(prob_prop(l)) - std::log(prob(l,kprime)));
+              Rprintf("! log_pi:%.4f\n", log_pi);
+            }
+            // probability of selected variables in the ohter trees
+
+
+            //MH ratio
+            log_ar = 0.0;
+            log_ar = log_pi ;
+              //+ diffg*adjprobtmp-diffg*(std::log(adjprob) - std::log(1-adjprob));
+            // Rprintf("! log_ar:%.4f\n", log_ar);
+
+            if(log_ar > std::log(R::runif(0.0,1.0))){
+              adj(l,k)  = adj_prop;
+              Rprintf("! new prob:%.4f\n", adj_prop);
+              for(size_t kprime=0;kprime<K;kprime++){
+                //if(kprime == k) continue;
+                prob(l,kprime) = prob_tmp[kprime];
+                Rprintf("end new %d %d:%.4f\n", l,kprime,  prob(l,kprime));
+              }
+
+            }
+          }
+        }
+
+        prob1 = prob.col(k);
         probvec = arma::conv_to<std::vector<double>>::from(prob1);
         // update prob vector
         mul_bart[k].setpv(probvec);
@@ -381,11 +421,12 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
       sdraw(iter, k) = sigma[k];
       //Rprintf("sdraw %f \n", sdraw(iter, k));
 
+      ivarcnt = mul_bart[k].getnv();
+      ivarprb  = mul_bart[k].getpv();
+
       if(iter >= burn){
         for(size_t j=0;j<n[k];j++) trdraw(iter-burn, j, k)+= mul_bart[k].f(j);
         //Rprintf("trdraw %f \n", trdraw(iter-burn, 20, k));
-        ivarcnt = mul_bart[k].getnv();
-        ivarprb  = mul_bart[k].getpv();
 
         size_t iter2=(iter-burn);
         for(size_t j=0;j<p;j++){
@@ -403,12 +444,12 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * reladeness
      */
-    if(Joint) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
+    if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
                        B, accep_gamma, accep_theta, within_model);
     /*
      * edge-specific
      */
-    if(Joint) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
+    if(Joint && iter > burn/2) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
 
 
     //record nu, adj, Theta
@@ -442,6 +483,9 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     ret["theta_all"]=theta_all;
     ret["adj_all"]=adj_all;
     ret["nu_all"]=nu_all;
+    ret["accep_gamma"] = accep_gamma;
+    ret["accep_nu"] = accep_nu;
+    ret["accep_theta"] = accep_theta;
   }
 
   return ret;
