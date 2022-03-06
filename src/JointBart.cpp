@@ -48,15 +48,15 @@ double mrf_C(const arma::mat& Theta, // KxK matrix of graph similarity
 
 // [[Rcpp::export]]
 void up_relatedness(const arma::mat& adj,
-                        arma::mat& Theta,
-                        const arma::vec& nu,
-                        const double& alpha,
-                        const double& beta,
-                        const double& my_w,
-                        const arma::mat& B,
-                        arma::mat& accep_gamma,
-                        arma::mat& accep_theta,
-                        arma::mat& within_model){
+                    arma::mat& Theta,
+                    const arma::vec& nu,
+                    const double& alpha,
+                    const double& beta,
+                    const double& my_w,
+                    const arma::mat& B,
+                    arma::mat& accep_gamma,
+                    arma::mat& accep_theta,
+                    arma::mat& within_model){
   size_t K = Theta.n_rows;
   size_t p = nu.n_elem;
 
@@ -155,12 +155,12 @@ void up_relatedness(const arma::mat& adj,
 
 // [[Rcpp::export]]
 void up_nu(arma::vec& nu,
-               const arma::mat& adj,
-               const arma::mat& Theta,
-               const double& a,
-               const double& b,
-               const arma::mat& B,
-               arma::vec& accep_nu){
+           const arma::mat& adj,
+           const arma::mat& Theta,
+           const double& a,
+           const double& b,
+           const arma::mat& B,
+           arma::vec& accep_nu){
   double a_prop = 2.0, b_prop = 4.0;
   double qu, nu_prop, log_ar;
   size_t p = nu.n_elem;
@@ -229,7 +229,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   int *numcut = &nc[0];
   //int *grp = &igrp[0];
 
-  double rss, restemp, adjprobtmp, adjprob, adj_prop, log_pi, log_ar, diffg;
+  double rss, restemp, adjprobtmp, adjprob, adj_prop, log_ar, diffg, alpha_adj, alpha_adj_prop, sa_prop, sumtmp1;
+  double alpha_ga = 3, alpha_gb = 1;
   int totalcnt;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
@@ -241,7 +242,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::mat within_model = arma::zeros<arma::mat>(K, K);
   arma::vec accep_nu     = arma::zeros<arma::vec>(p);
   arma::mat prob         = arma::ones<arma::mat>(p, K);
-  prob=prob/p;
+
   //arma::mat adj          = arma::zeros<arma::mat>(p, K); //
   arma::vec prob_prop    = arma::zeros<arma::vec>(p);
   arma::vec prob1        = arma::zeros<arma::vec>(p);
@@ -257,8 +258,10 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   // sigma
   std::vector<double*> svec(K);
   std::vector<double>  probvec(p);
-  std::vector<double>  prob_tmp(K);
-  // start on bart
+
+  /*
+   * set parameters
+   */
   std::vector<heterbart>  mul_bart(K);
   for(size_t k=0; k<K; k++){
     mul_bart[k].setm(m);
@@ -303,6 +306,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
 
     svec[k] = new double[n[k]];
     for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
+
   }
 
   std::vector<double> ivarprb (p,0.);
@@ -314,8 +318,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
    * MCMC
    */
   Rprintf("\nMCMC\n");
-
-
   for(size_t iter=0;iter<(nd+burn);iter++) {
 
     if(iter == burn && Joint){
@@ -329,11 +331,17 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
      * update each graph
      */
     for(size_t k=0; k<K; k++){
+      /*
+       * update probability of G/adj
+       * Gk and Gk_prime only differs in edge l
+       */
       if(Joint && iter > burn/2){
-        /*
-         * update probability of G/adj
-         * Gk and Gk_prime only differs in edge l
-         */
+
+        totalcnt = 0;
+        for(size_t j=0;j<p;j++){
+          totalcnt += ivarcnt[j];
+        }
+
         for(arma::uword l=0;l<p;l++){
           adjprobtmp = arma::accu(Theta.row(k) % adj.row(l)) -
             Theta(k,k)*adj(l,k);
@@ -341,73 +349,73 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
           adjprobtmp = graph_nu(l) + 2.*adjprobtmp;
           adjprob    =   std::exp(adjprobtmp);
           adjprob    = adjprob/(1.+adjprob);
-          // Rprintf("adjprob:%.4f\n", adjprob);
-          // Rprintf("prob :%.4f\n", prob(l,k));
+          //Rprintf("adjprob:%.4f\n", adjprob);
+          if(l == 10 && iter % 1000 == 0) Rprintf("curr_prob :%.4f\n", prob(l,k));
 
-          //adjprob = 0.4;
-          if(adjprob > R::runif(0.0, 1.0)){
+          if(adjprob > R::runif(0.0,1.0)){
             adj_prop = 1;
           }else{
             adj_prop = 0;
           }
-          // Rprintf("adj_propose:%.4f\n", adj_prop);
+          if(l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
           if(adj(l,k) != adj_prop){
 
-            // prob_prop    = prob.col(k);
-            // prob_prop[l] = adjprob;
-            // //Rprintf("! old:%.4f\n", prob(l,k));
-            // //Rprintf("! new:%.4f\n", prob_prop[l]);
             diffg = adj_prop - adj(l,k);
-            // Rprintf("! diff:%.4f\n",diffg);
-            log_pi = 0.0;
-            for(size_t kprime=0;kprime<K;kprime++){
-              //if(kprime == k) continue;
-              totalcnt = 0;
-              ivarcnt  = mul_bart[kprime].getnv();
-              for(size_t j=0;j<p;j++){
-                totalcnt += ivarcnt[j];
-              }
+            prob_prop    = prob.col(k);
+            sa_prop      = adj_prop*alpha_ga + (1.-adj_prop)*alpha_gb + ivarcnt[l];
+            prob_prop(l) =  R::rgamma(sa_prop, 1.0);
+            if(l == 10 && iter % 1000 == 0) Rprintf("prob_prop(l):%.4f\n", prob_prop(l));
 
-              prob_prop    = prob.col(kprime);
-              prob_prop(l) = std::exp(graph_nu(l) +
-                2.*(arma::accu(Theta.row(kprime) % adj.row(l)) -
-                Theta(kprime,kprime)*adj(l,kprime) ));
-              prob_prop(l)  = prob_prop(l)/(1.+prob_prop(l) );
-              prob_tmp[kprime] = prob_prop(l);
-              // probability of selected variables in tree
-              log_pi += totalcnt*(std::log(arma::accu(prob.col(kprime))) -
-                std::log(arma::accu(prob_prop))) +
-                ivarcnt[l]*(std::log(prob_prop(l)) - std::log(prob(l,kprime)));
-              Rprintf("! log_pi:%.4f\n", log_pi);
-            }
-            // probability of selected variables in the ohter trees
-
-
-            //MH ratio
+            //MH
             log_ar = 0.0;
-            log_ar = log_pi ;
-              //+ diffg*adjprobtmp-diffg*(std::log(adjprob) - std::log(1-adjprob));
-            // Rprintf("! log_ar:%.4f\n", log_ar);
+            log_ar = totalcnt*(std::log(sumtmp1) -
+              std::log(sumtmp1-prob(l,k)+prob_prop(l))) +
+              diffg*(-lgamma(alpha_ga) + lgamma(alpha_gb) -
+              lgamma(alpha_gb+ ivarcnt[l]) + lgamma(alpha_ga+ ivarcnt[l]));
+            if(l == 10 && iter % 1000 == 0) Rprintf("log_ar:%.4f, %4f, %4f\n",
+               diffg*adjprobtmp,  totalcnt*(std::log(sumtmp1) -
+                 std::log(sumtmp1-prob(l,k)+prob_prop(l))),
+                 diffg*(-lgamma(alpha_ga) + lgamma(alpha_gb) -
+                   lgamma(alpha_gb+ ivarcnt[l]) + lgamma(alpha_ga+ ivarcnt[l])));
 
             if(log_ar > std::log(R::runif(0.0,1.0))){
               adj(l,k)  = adj_prop;
-              Rprintf("! new prob:%.4f\n", adj_prop);
-              for(size_t kprime=0;kprime<K;kprime++){
-                //if(kprime == k) continue;
-                prob(l,kprime) = prob_tmp[kprime];
-                Rprintf("end new %d %d:%.4f\n", l,kprime,  prob(l,kprime));
-              }
+              prob(l,k)  = prob_prop(l);
+              if(l == 10 && iter % 1000 == 0) Rprintf("accept:%.4f\n");
 
+            }else{
+              /*
+               * update probability
+               */
+              sa_prop      =  adj(l,k)*alpha_ga + (1.- adj(l,k))*alpha_gb + ivarcnt[l];
+              prob_prop(l) =  R::rgamma(sa_prop, 1.0);
+
+              // MH
+              sumtmp1 = 0.0;
+              sumtmp1 = arma::accu(prob.col(k));
+              log_ar = 0.0;
+              log_ar = totalcnt*(std::log(sumtmp1) -
+                std::log(sumtmp1-prob(l,k)+prob_prop(l))) -
+                ivarcnt[l]*(std::log(prob_prop(l)) - std::log(prob(l,k))) ;
+
+              if(log_ar > std::log(R::runif(0.0,1.0))){
+                prob(l,k)  = prob_prop(l);
+                if(l == 10 && iter % 1000 == 0) Rprintf("accept new prob:%.4f\n", prob(l,k));
+
+              }
             }
+
           }
+
         }
 
-        prob1 = prob.col(k);
-        probvec = arma::conv_to<std::vector<double>>::from(prob1);
-        // update prob vector
-        mul_bart[k].setpv(probvec);
 
       }
+
+      prob1   = prob.col(k);
+      probvec = arma::conv_to<std::vector<double>>::from(prob1);
+      // update prob vector
+      mul_bart[k].setpv(probvec);
 
       mul_bart[k].draw(svec[k], gen);
       rss=0.0,restemp=0.0;
@@ -445,7 +453,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
      * reladeness
      */
     if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
-                       B, accep_gamma, accep_theta, within_model);
+       B, accep_gamma, accep_theta, within_model);
     /*
      * edge-specific
      */
