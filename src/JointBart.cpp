@@ -339,6 +339,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
       if(Joint && iter > burn/2){
 
         ivarcnt = mul_bart[k].getnv();
+        ivarprb = mul_bart[k].getpv();
         totalcnt = 0;
         for(size_t j=0;j<p;j++){
           totalcnt += ivarcnt[j];
@@ -369,27 +370,28 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
             diffg = adj_prop - adj(l,k);
             prob_prop    = adj.col(k);
             prob_prop(l) = adj_prop;
-            prob_prop    = (prob_prop + 1.)*0.5;
-            prob1        = (adj.col(k) + 1.)*0.5;
+            prob_prop    = (18*prob_prop + 1.)/19.;
+            prob1        = (18*adj.col(k) + 1.)/19.;
             //sa_prop    = adj_prop*alpha_ga + (1.-adj_prop)*alpha_gb + ivarcnt[l];
             //prob_prop(l) =  R::rgamma(sa_prop, 1.0);
             //if(l == 10 && iter % 1000 == 0) Rprintf("prob_prop(l):%.4e\n", prob_prop(l));
 
             //MH
 
-            sumtmp1 = adjprobtmp +
+            sumtmp1 =  diffg*adjprobtmp +
               lgamma(arma::accu(prob_prop)) - lgamma(arma::accu(prob1)) +
-              lgamma(prob1(l)) -
-              lgamma(prob_prop(l))+
-              lgamma(arma::accu(prob_prop)+totalcnt) -
-              lgamma(arma::accu(prob1)+totalcnt)  +
-              lgamma(prob_prop(l)+ivarcnt[l]) -
-              lgamma(prob1(l)+ivarcnt[l]) ;
+              lgamma(prob1(l)) - lgamma(prob_prop(l)) +
+              (prob_prop(l) - prob1(l))*std::log(ivarprb[l]);
+              // lgamma(arma::accu(prob1)+totalcnt) -
+              // lgamma(arma::accu(prob_prop)+totalcnt) +
+              // lgamma(prob_prop(l)+ivarcnt[l]) -
+              // lgamma(prob1(l)+ivarcnt[l]) ;
             log_ar  = sumtmp1;
             if(k == 1 && l == 10 && iter % 1000 == 0)
-              Rprintf("log_ar:%.4f--, %.4f, %.4f, cnt:%d, total:%d \n",
-                      log_ar, lgamma(arma::accu(prob_prop)),
-                      lgamma(arma::accu(prob1)), ivarcnt[l], totalcnt);
+              Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
+                      log_ar, arma::accu(prob_prop),arma::accu(prob1),
+                      prob_prop(l),prob1(l), ivarprb[l],
+                      ivarcnt[l], totalcnt);
 
             // log_ar = totalcnt*(std::log(sumtmp1) -
             //   std::log(sumtmp1-prob(l,k)+prob_prop(l))) +
@@ -433,7 +435,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
 
         }
 
-        for(size_t j=0;j<p;j++) probvec[j] = (adj(j, k) + 1.)*0.5 + (double)ivarcnt[j];
+        for(size_t j=0;j<p;j++) probvec[j] = (18*adj(j, k) + 1.)/19. + (double)ivarcnt[j];
         if(k == 1 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         probvec    = gen.log_dirichlet(probvec);
         if(k == 1 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
