@@ -229,7 +229,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   int *numcut = &nc[0];
   //int *grp = &igrp[0];
 
-  double rss, restemp, adjprobtmp, adjprob, adj_prop, log_ar, diffg, alpha_adj, alpha_adj_prop, sa_prop, sumtmp1;
+  double rss, restemp, adjprobtmp, adj_prop, log_ar, diffg, sumtmp1;
+  double  alpha_adj = 9.; //19
   //double alpha_ga = 6./p, alpha_gb = 3./p;
   int totalcnt;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
@@ -242,7 +243,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::mat within_model = arma::zeros<arma::mat>(K, K);
   arma::vec accep_nu     = arma::zeros<arma::vec>(p);
   arma::mat prob         = arma::ones<arma::mat>(p, K);
-  prob = prob/p;
 
   //arma::mat adj          = arma::zeros<arma::mat>(p, K); //
   arma::vec prob_prop  = arma::zeros<arma::vec>(p);
@@ -319,15 +319,15 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
    * MCMC
    */
   Rprintf("\nMCMC\n");
-  for(size_t iter=0;iter<(nd+burn);iter++) {
-
+  for(size_t iter=0;iter<(nd+burn);iter++){
+    //initialize monitor variable
     if(iter == burn && Joint){
       accep_gamma.zeros();
       accep_theta.zeros();
       within_model.zeros();
       accep_nu.zeros();
     }
-
+    if(iter % 1000 == 0) Rprintf("iteration: %d\n", iter);
     /*
      * update each graph
      */
@@ -346,115 +346,68 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
         }
 
         for(arma::uword l=0;l<p;l++){
-          adjprobtmp = arma::accu(Theta.row(k) % adj.row(l)) -
-            Theta(k,k)*adj(l,k);
+          adjprobtmp = 0.0;
+          for(arma::uword kprime=0;kprime<K;kprime++){
+            if(kprime == k) continue;
+            adjprobtmp += Theta(k, kprime) *  adj(l,kprime);
+          }
           adjprobtmp = graph_nu(l) + 2.*adjprobtmp;
           // adjprob    = std::exp(adjprobtmp);
           // adjprob    = adjprob/(1.+adjprob);
 
-          if(k == 1 && l == 10 && iter % 1000 == 0){
+          if(k == 3 && l == 10 && iter % 1000 == 0){
             Rprintf("adjprobtmp:%.4f\n", adjprobtmp);
             //Rprintf("curr_prob :%.4f\n", prob(l,k));
             //Rprintf("adjprob:%.4f\n", adjprob);
           }
           adj_prop = 1.-adj(l,k);
 
-          // if(adjprob > R::runif(0.0,1.0)){
-          //   adj_prop = 1;
-          // }else{
-          //   adj_prop = 0;
-          // }
-          if(k == 1 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
-          if(adj(l,k) != adj_prop){
+          if(k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
 
-            diffg = adj_prop - adj(l,k);
-            prob_prop    = adj.col(k);
-            prob_prop(l) = adj_prop;
-            prob_prop    = (18*prob_prop + 1.)/19.;
-            prob1        = (18*adj.col(k) + 1.)/19.;
-            //sa_prop    = adj_prop*alpha_ga + (1.-adj_prop)*alpha_gb + ivarcnt[l];
-            //prob_prop(l) =  R::rgamma(sa_prop, 1.0);
-            //if(l == 10 && iter % 1000 == 0) Rprintf("prob_prop(l):%.4e\n", prob_prop(l));
+          diffg        = adj_prop - adj(l,k);
+          prob_prop    = adj.col(k);
+          prob_prop(l) = adj_prop;
+          prob_prop    = (alpha_adj*prob_prop + 1.)/(alpha_adj+1.);
+          prob1        = (alpha_adj*adj.col(k) + 1.)/(alpha_adj+1.);
 
-            //MH
+          //MH
+          sumtmp1 =  diffg*adjprobtmp +
+            lgamma(arma::accu(prob_prop)) - lgamma(arma::accu(prob1)) +
+            lgamma(prob1(l)) - lgamma(prob_prop(l)) +
+            (prob_prop(l) - prob1(l))*std::log(ivarprb[l]);
 
-            sumtmp1 =  diffg*adjprobtmp +
-              lgamma(arma::accu(prob_prop)) - lgamma(arma::accu(prob1)) +
-              lgamma(prob1(l)) - lgamma(prob_prop(l)) +
-              (prob_prop(l) - prob1(l))*std::log(ivarprb[l]);
-              // lgamma(arma::accu(prob1)+totalcnt) -
-              // lgamma(arma::accu(prob_prop)+totalcnt) +
-              // lgamma(prob_prop(l)+ivarcnt[l]) -
-              // lgamma(prob1(l)+ivarcnt[l]) ;
-            log_ar  = sumtmp1;
-            if(k == 1 && l == 10 && iter % 1000 == 0)
-              Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
-                      log_ar, arma::accu(prob_prop),arma::accu(prob1),
-                      prob_prop(l),prob1(l), ivarprb[l],
-                      ivarcnt[l], totalcnt);
+          log_ar  = sumtmp1;
+          if(k == 3 && l == 10 && iter % 1000 == 0)
+            Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
+                    log_ar, arma::accu(prob_prop),arma::accu(prob1),
+                    prob_prop(l),prob1(l), ivarprb[l],
+                                                  ivarcnt[l], totalcnt);
 
-            // log_ar = totalcnt*(std::log(sumtmp1) -
-            //   std::log(sumtmp1-prob(l,k)+prob_prop(l))) +
-            //   diffg*(-lgamma(alpha_ga) + lgamma(alpha_gb) -
-            //   lgamma(alpha_gb+ ivarcnt[l]) + lgamma(alpha_ga+ ivarcnt[l]));
-            // if(l == 10 && iter % 1000 == 0) Rprintf("log_ar:%.4f, %4f, %4f\n",
-            //    diffg*adjprobtmp,  totalcnt*(std::log(sumtmp1) -
-            //      std::log(sumtmp1-prob(l,k)+prob_prop(l))),
-            //      diffg*(-lgamma(alpha_ga) + lgamma(alpha_gb) -
-            //        lgamma(alpha_gb+ ivarcnt[l]) + lgamma(alpha_ga+ ivarcnt[l])));
-
-            if(log_ar > std::log(R::runif(0.0,1.0))){
-              adj(l,k)  = adj_prop;
-              if(k == 1 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
-            }
-
-
-            // else{
-            //   /*
-            //    * update probability
-            //    */
-            //   sa_prop      =  adj(l,k)*alpha_ga + (1.- adj(l,k))*alpha_gb + ivarcnt[l];
-            //   prob_prop(l) =  R::rgamma(sa_prop, 1.0);
-            //
-            //   // MH
-            //   sumtmp1 = 0.0;
-            //   sumtmp1 = arma::accu(prob.col(k));
-            //   log_ar = 0.0;
-            //   log_ar = totalcnt*(std::log(sumtmp1) -
-            //     std::log(sumtmp1-prob(l,k)+prob_prop(l))) -
-            //     ivarcnt[l]*(std::log(prob_prop(l)) - std::log(prob(l,k))) ;
-            //
-            //   if(log_ar > std::log(R::runif(0.0,1.0))){
-            //     prob(l,k)  = prob_prop(l);
-            //     if(l == 10 && iter % 1000 == 0) Rprintf("accept new prob:%.4f\n", prob(l,k));
-            //
-            //   }
-            // }
-
+          if(log_ar > std::log(R::runif(0.0,1.0))){
+            adj(l,k)  = adj_prop;
+            if(k == 3 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
           }
-
         }
 
-        for(size_t j=0;j<p;j++) probvec[j] = (18*adj(j, k) + 1.)/19. + (double)ivarcnt[j];
-        if(k == 1 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        for(size_t j=0;j<p;j++){
+          probvec[j] = (alpha_adj*adj(j, k) + 1.)/(alpha_adj+1.) + (double)ivarcnt[j];
+        }
+        if(k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         probvec    = gen.log_dirichlet(probvec);
-        if(k == 1 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        if(k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         for(size_t j=0;j<p;j++) probvec[j] = std::exp(probvec[j]);
-        if(k == 1 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
+        if(k == 3 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
         //prob1   = prob.col(k);
         //probvec = arma::conv_to<std::vector<double>>::from(prob1);
         // update prob vector
         mul_bart[k].setpv(probvec);
       }
 
-
-
       mul_bart[k].draw(svec[k], gen);
       rss=0.0,restemp=0.0;
       for(size_t j=0; j<n[k]; j++){
         restemp=((mul_bart[k].gety(j))-mul_bart[k].f(j))/(mul_bart[k].getw(j));
         rss += restemp*restemp;
-
       }
       sigma[k] = sqrt((nu[k]*lambda[k] + rss)/gen.chi_square(n[k]+nu[k]));
       for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
@@ -478,9 +431,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
         //Rprintf("varprb %f \n", varprb(iter2, 5, k));
         //Rprintf("varcnt %f \n", varcnt(iter2, 5, k));
       }
-
     }
-
     /*
      * reladeness
      */
@@ -491,7 +442,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
      */
     if(Joint && iter > burn/2) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
 
-
     //record nu, adj, Theta
     if(iter >= burn && Joint){
       size_t iter2=(iter-burn);
@@ -500,7 +450,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
       adj_all.row(iter2)   = adj;
       nu_all.row(iter2)    = graph_nu.t();
     }
-
   }
 
   /*
@@ -511,7 +460,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   //   Rprintf("\nEND\n");
   //   mul_bart[k].pr();
   // }
-
   Rcpp::List ret;
   ret["sigma"]=sdraw;
   //ret["yhat.train.mean"]=trmean;
@@ -527,7 +475,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     ret["accep_nu"] = accep_nu;
     ret["accep_theta"] = accep_theta;
   }
-
   return ret;
 }
 
