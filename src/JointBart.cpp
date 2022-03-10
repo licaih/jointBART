@@ -220,6 +220,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const double& my_w,
                const double& graph_a,
                const double& graph_b,
+               double& alpha_adj,
                const bool& Joint){
 
   /*
@@ -230,7 +231,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   //int *grp = &igrp[0];
 
   double rss, restemp, adjprobtmp, adj_prop, log_ar, diffg, sumtmp1;
-  double  alpha_adj = 9.; //19
+  alpha_adj -= 1.; //19
   //double alpha_ga = 6./p, alpha_gb = 3./p;
   int totalcnt;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);

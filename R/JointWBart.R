@@ -37,6 +37,7 @@ JointWBart=function(
   ndpost=1000L,
   nskip=100L,
   transposed=FALSE,
+  alpha_adj = 10,
   Joint = T
 )
 {
@@ -168,6 +169,7 @@ JointWBart=function(
               my_w,
               graph_a,
               graph_b,
+              alpha_adj,
               Joint
   )
 
