@@ -60,7 +60,7 @@ void up_relatedness(const arma::mat& adj,
   size_t K = Theta.n_rows;
   size_t p = nu.n_elem;
 
-  double alpha_prop = 1.0, beta_prop = 1.0;
+  double alpha_prop = 2.0, beta_prop = 4.0;
   double theta_prop, sum_over_edges, log_ar;
   arma::mat Theta_prop(K,K);
 
@@ -161,12 +161,12 @@ void up_nu(arma::vec& nu,
            const double& b,
            const arma::mat& B,
            arma::vec& accep_nu){
-  double a_prop = 2.0, b_prop = 4.0;
+  double a_prop = 1.0, b_prop = 2.0;
   double qu, nu_prop, log_ar;
   size_t p = nu.n_elem;
 
   for(size_t l=0;l<p;l++){
-    qu =  R::rgamma(a_prop, 1.0/b_prop);
+    qu =  R::rbeta(a_prop, b_prop);
     nu_prop = std::log(qu) - std::log(1-qu);
 
     log_ar = (nu_prop - nu(l))*std::log(a - a_prop + sum(adj.row(l))) +
@@ -356,14 +356,14 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
           // adjprob    = std::exp(adjprobtmp);
           // adjprob    = adjprob/(1.+adjprob);
 
-          if(k == 3 && l == 10 && iter % 1000 == 0){
+          if(false && k == 3 && l == 10 && iter % 1000 == 0){
             Rprintf("adjprobtmp:%.4f\n", adjprobtmp);
             //Rprintf("curr_prob :%.4f\n", prob(l,k));
             //Rprintf("adjprob:%.4f\n", adjprob);
           }
           adj_prop = 1.-adj(l,k);
 
-          if(k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
+          if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
 
           diffg        = adj_prop - adj(l,k);
           prob_prop    = adj.col(k);
@@ -378,26 +378,26 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
             (prob_prop(l) - prob1(l))*std::log(ivarprb[l]);
 
           log_ar  = sumtmp1;
-          if(k == 3 && l == 10 && iter % 1000 == 0)
+          if(false && k == 3 && l == 10 && iter % 1000 == 0)
             Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
                     log_ar, arma::accu(prob_prop),arma::accu(prob1),
                     prob_prop(l),prob1(l), ivarprb[l],
                                                   ivarcnt[l], totalcnt);
 
-          if(log_ar > std::log(R::runif(0.0,1.0))){
+          if( log_ar > std::log(R::runif(0.0,1.0))){
             adj(l,k)  = adj_prop;
-            if(k == 3 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
+            if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
           }
         }
 
         for(size_t j=0;j<p;j++){
           probvec[j] = (alpha_adj*adj(j, k) + 1.)/(alpha_adj+1.) + (double)ivarcnt[j];
         }
-        if(k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         probvec    = gen.log_dirichlet(probvec);
-        if(k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         for(size_t j=0;j<p;j++) probvec[j] = std::exp(probvec[j]);
-        if(k == 3 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
+        if(false && k == 3 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
         //prob1   = prob.col(k);
         //probvec = arma::conv_to<std::vector<double>>::from(prob1);
         // update prob vector
