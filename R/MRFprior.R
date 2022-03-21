@@ -154,7 +154,7 @@ update_nu <- function(nu, adj, Theta, a, b, B){
    qu = rgamma(1, shape = a_prop, rate = b_prop)
    nu_prop = log(qu) - log(1-qu)
 
-   log_ar = (nu_prop - nu[l])*log(a - a_prop + sum(adj[l,])) +
+   log_ar = (nu_prop - nu[l])*(a - a_prop + sum(adj[l,])) +
      log(mrf_C(Theta, nu[l],B)) +
      (a+b-a_prop-b_prop)*(log(1+exp(nu[l]))-log(1+exp(nu_prop))) -
      log(mrf_C(Theta, nu_prop, B))

@@ -161,7 +161,7 @@ void up_nu(arma::vec& nu,
            const double& b,
            const arma::mat& B,
            arma::vec& accep_nu){
-  double a_prop = 1.0, b_prop = 2.0;
+  double a_prop = 1.0, b_prop = 1.0;
   double qu, nu_prop, log_ar;
   size_t p = nu.n_elem;
 
@@ -169,7 +169,7 @@ void up_nu(arma::vec& nu,
     qu =  R::rbeta(a_prop, b_prop);
     nu_prop = std::log(qu) - std::log(1-qu);
 
-    log_ar = (nu_prop - nu(l))*std::log(a - a_prop + sum(adj.row(l))) +
+    log_ar = (nu_prop - nu(l))*(a - a_prop + arma::accu(adj.row(l))) +
       std::log(mrf_C(Theta, nu(l),B)) +
       (a+b-a_prop-b_prop)*(std::log(1+std::exp(nu(l)))-
       std::log(1+std::exp(nu_prop))) -
