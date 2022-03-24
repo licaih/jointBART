@@ -52,6 +52,7 @@ void up_relatedness(const arma::mat& adj,
                     const arma::vec& nu,
                     const double& alpha,
                     const double& beta,
+                    const double& my_w,
                     const arma::mat& B,
                     arma::mat& accep_gamma,
                     arma::mat& accep_theta,
@@ -61,7 +62,6 @@ void up_relatedness(const arma::mat& adj,
 
   double alpha_prop = 2.0, beta_prop = 4.0;
   double theta_prop, sum_over_edges, log_ar;
-  double my_w = 0.5, alpha_w = 1., beta_w = 1.;
   arma::mat Theta_prop(K,K);
 
   for(size_t k =0; k<K-1;k++){
@@ -89,14 +89,9 @@ void up_relatedness(const arma::mat& adj,
           log(mrf_C(Theta_prop, nu(l), B)));
       }
 
-
       // MH ratio
       log_ar = 0.0;
       if(theta_prop == 0.0){
-
-        // add myw hyperprior
-        my_w = R::rbeta(alpha_w, beta_w+1.);
-
         log_ar = alpha_prop*(std::log(beta_prop)) - lgamma(alpha_prop) +
           lgamma(alpha) - alpha*std::log(beta) -
           (alpha - alpha_prop)*std::log(Theta(k,kprime)) +
@@ -106,9 +101,6 @@ void up_relatedness(const arma::mat& adj,
         //        k, kprime, log_ar, Theta(k,kprime));
 
       }else{
-        // add myw hyperprior
-        my_w = R::rbeta(alpha_w+1., beta_w);
-
         log_ar = alpha*std::log(beta) - lgamma(alpha) +
           lgamma(alpha_prop) - alpha_prop*std::log(beta_prop) +
           (alpha-alpha_prop)*std::log(theta_prop) -
@@ -191,6 +183,7 @@ void up_nu(arma::vec& nu,
   }
 }
 
+
 // [[Rcpp::export]]
 List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const size_t& p, //number of variables
@@ -224,6 +217,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const arma::mat& B, // combitorial of edge inclusion
                const double& graph_alpha,
                const double& graph_beta,
+               const double& my_w,
                const double& graph_a,
                const double& graph_b,
                double& alpha_adj,
@@ -442,7 +436,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * reladeness
      */
-    if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta,
+    if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
        B, accep_gamma, accep_theta, within_model);
     /*
      * edge-specific
