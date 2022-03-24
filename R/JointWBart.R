@@ -7,7 +7,6 @@ JointWBart=function(
   graph_nu,
   graph_alpha,
   graph_beta,
-  my_w,
   graph_a,
   graph_b,
   x.test=vector("list", length(y.train)), # ignored
@@ -166,7 +165,6 @@ JointWBart=function(
               B,
               graph_alpha,
               graph_beta,
-              my_w,
               graph_a,
               graph_b,
               alpha_adj,
