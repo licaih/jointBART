@@ -1,21 +1,4 @@
-/*
- *  BART: Bayesian Additive Regression Trees
- *  Copyright (C) 2017 Robert McCulloch and Rodney Sparapani
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, a copy is available at
- *  https://www.R-project.org/Licenses/GPL-2
- */
+
 #include <RcppArmadillo.h>
 #include "tree.h"
 #include "treefuns.h"
@@ -30,26 +13,11 @@ using namespace Rcpp;
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
-// [[Rcpp::export]]
-double mrf_C(const arma::mat& Theta, // KxK matrix of graph similarity
-             const double& nui,// p vec of edge-specific prior
-             const arma::mat& B // combination of edge inclusion
-){
-  double mrf_C = 0.0;
-  double tmp2, tmp3;
-
-  for(arma::uword i=0;i<B.n_rows;i++){
-    tmp3 = accu(B.row(i));
-    tmp2 = as_scalar( B.row(i)*Theta*B.row(i).t());
-    mrf_C += std::exp(nui*tmp3+tmp2) ;
-  }
-  return mrf_C;
-}
 
 // [[Rcpp::export]]
-void up_relatedness(const arma::mat& adj,
+void graph_up_relatedness(const arma::cube& adj,
                     arma::mat& Theta,
-                    const arma::vec& nu,
+                    const arma::mat& nu,
                     const double& alpha,
                     const double& beta,
                     const double& my_w,
@@ -58,7 +26,7 @@ void up_relatedness(const arma::mat& adj,
                     arma::mat& accep_theta,
                     arma::mat& within_model){
   size_t K = Theta.n_rows;
-  size_t p = nu.n_elem;
+  size_t p = nu.n_cols;
 
   double alpha_prop = 2.0, beta_prop = 4.0;
   double theta_prop, sum_over_edges, log_ar;
@@ -84,9 +52,13 @@ void up_relatedness(const arma::mat& adj,
       // log likelihood
       sum_over_edges = 0.0;
       for(size_t l=0;l<p;l++){
-        sum_over_edges += (std::log(mrf_C(Theta, nu(l), B)) +
-          2 * (theta_prop - Theta(k, kprime)) * adj(l, k) * adj(l, kprime) -
-          log(mrf_C(Theta_prop, nu(l), B)));
+        for(size_t i = 0; i<p; i++){
+          if(l == i) continue;
+          sum_over_edges += (std::log(mrf_C(Theta, nu(l,i), B)) +
+          2 * (theta_prop - Theta(k, kprime)) * adj(l, i, k) * adj(l, i, kprime) -
+          log(mrf_C(Theta_prop, nu(l,i), B)));
+        }
+
       }
 
       // MH ratio
@@ -102,7 +74,7 @@ void up_relatedness(const arma::mat& adj,
 
       }else{
         log_ar = alpha*std::log(beta) - lgamma(alpha) +
-          lgamma(alpha_prop) - alpha_prop*std::log(beta_prop) + //
+          lgamma(alpha_prop) - alpha_prop*std::log(beta_prop) +
           (alpha-alpha_prop)*std::log(theta_prop) -
           (beta-beta_prop)*theta_prop + sum_over_edges +
           std::log(my_w) - std::log(1-my_w);
@@ -130,9 +102,12 @@ void up_relatedness(const arma::mat& adj,
         //log-likelihood
         sum_over_edges = 0.0;
         for(size_t l=0;l<p;l++){
-          sum_over_edges += (std::log(mrf_C(Theta, nu(l), B)) +
-            2 * (theta_prop - Theta(k, kprime)) * adj(l, k) * adj(l, kprime) -
-            std::log(mrf_C(Theta_prop, nu(l), B)));
+          for(size_t i = 0; i<p; i++){
+            if(l == i) continue;
+            sum_over_edges += (std::log(mrf_C(Theta, nu(l,i), B)) +
+            2 * (theta_prop - Theta(k, kprime)) * adj(l, i, k) * adj(l,i, kprime) -
+            std::log(mrf_C(Theta_prop, nu(l,i), B)));
+          }
         }
 
         // MH ratio
@@ -154,54 +129,57 @@ void up_relatedness(const arma::mat& adj,
 
 
 // [[Rcpp::export]]
-void up_nu(arma::vec& nu,
-           const arma::mat& adj,
+void graph_up_nu(arma::mat& nu,
+           const arma::cube& adj,
            const arma::mat& Theta,
            const double& a,
            const double& b,
            const arma::mat& B,
-           arma::vec& accep_nu){
-  double a_prop = 1.0, b_prop = 6.0;
+           arma::mat& accep_nu){
+  double a_prop = 1.0, b_prop = 1.0;
   double qu, nu_prop, log_ar;
-  size_t p = nu.n_elem;
+  size_t p = nu.n_cols;
 
   for(size_t l=0;l<p;l++){
-    qu =  R::rbeta(a_prop, b_prop);
+    for(size_t i=0;i<p;i++){
+          qu =  R::rbeta(a_prop, b_prop);
     nu_prop = std::log(qu) - std::log(1-qu);
 
-    log_ar = (nu_prop - nu(l))*(a - a_prop + arma::accu(adj.row(l))) +
-      std::log(mrf_C(Theta, nu(l),B)) +
-      (a+b-a_prop-b_prop)*(std::log(1+std::exp(nu(l)))-
+    log_ar = (nu_prop - nu(l,i))*(a - a_prop + arma::accu(adj.row(l))) +
+      std::log(mrf_C(Theta, nu(l,i),B)) +
+      (a+b-a_prop-b_prop)*(std::log(1+std::exp(nu(l,i)))-
       std::log(1+std::exp(nu_prop))) -
-      std::log(mrf_C(Theta, nu_prop, B));
+      std::log(mrf_C(Theta, nu_prop, B));////
 
     if(log_ar > std::log(R::runif(0.0,1.0))){
       nu(l) = nu_prop;
       accep_nu(l) += 1;
     }
+    }
+
 
   }
 }
 
 
 // [[Rcpp::export]]
-List JointBart(const IntegerVector& n, // vector of sample sizes in train
+List graphBart(const IntegerVector& n, // vector of sample sizes in train
                const size_t& p, //number of variables
-               const IntegerVector& np, // vector of sample sizes in test
-               const List& x, //x, train, each element p x n_k
-               const List& y, //y, train, each element n_k
-               const List& xp, //x, test, each element p x np_k,
+               //const IntegerVector& np, // vector of sample sizes in test (need to remove)
+               //const List& x, //x, train, each element p x n_k
+               const List& y, //y, list, each element is an matrix
+               //const List& xp, //x, test, each element p x np_k,
                const size_t& m, //number of tree
                IntegerVector& nc, //number of cut points same across all the graph
                const size_t& nd, //number of kept draws
                const size_t& burn, //number of burn
-               const double& mybeta, //tree prior powe r
+               const double& mybeta, //tree prior power
                const double& alpha, //tree prior base
                NumericVector& tau, //sigma prior, vec
                NumericVector& nu, // sigma prior, vec
                NumericVector& lambda, // The scale of the prior for variance, vec
                NumericVector& sigma, // he prior for the error variance, vect
-               const List& w, // each element Vector of weights which multiply the standard deviation.
+               const List& w, // same within a graph. each element Vector of weights which multiply the standard deviation.
                const bool& dart, //
                const double& theta, //
                const double& omega, //
@@ -212,16 +190,15 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const bool& aug,
                const List& iXinfo, // each element is a matrix
                arma::mat& Theta, // graph similarity
-               arma::mat& adj,
-               arma::vec& graph_nu,
+               arma::cube& adj,
+               arma::mat& graph_nu, // pxpxK
                const arma::mat& B, // combitorial of edge inclusion
                const double& graph_alpha,
                const double& graph_beta,
                const double& my_w,
                const double& graph_a,
                const double& graph_b,
-               double& adj_alpha0,
-               double& adj_alpha1,
+               double& alpha_adj,
                const bool& Joint){
 
   /*
@@ -231,13 +208,14 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   int *numcut = &nc[0];
   //int *grp = &igrp[0];
 
-  double rss, restemp, adjprobtmp, adj_prop, log_ar, diffg, adj_sum, alpha_sum, alpha_sum_star;
+  double rss, restemp, adjprobtmp, adj_prop, log_ar, diffg, sumtmp1;
+  alpha_adj -= 1.; //19
+  //double alpha_ga = 6./p, alpha_gb = 3./p;
   int totalcnt;
   arma::mat sdraw= arma::zeros<arma::mat>(nd+burn, K);
   arma::cube varprb = arma::zeros<arma::cube>(nd,p,K);
   arma::cube varcnt = arma::zeros<arma::cube>(nd,p,K);
   arma::cube trdraw = arma::zeros<arma::cube>(nd,max(n),K);//need to change
-  arma::cube tedraw = arma::zeros<arma::cube>(nd,max(np),K);//need to change
 
   arma::mat accep_gamma  = arma::zeros<arma::mat>(K, K);
   arma::mat accep_theta  = arma::zeros<arma::mat>(K, K);
@@ -246,17 +224,12 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::mat prob         = arma::ones<arma::mat>(p, K);
 
   //arma::mat adj          = arma::zeros<arma::mat>(p, K); //
-  //arma::vec prob_prop  = arma::zeros<arma::vec>(p);
-  //arma::vec prob1      = arma::zeros<arma::vec>(p);
+  arma::vec prob_prop  = arma::zeros<arma::vec>(p);
+  arma::vec prob1      = arma::zeros<arma::vec>(p);
   arma::cube theta_all = arma::zeros<arma::cube>(nd,K,K);
   arma::cube adj_all   = arma::zeros<arma::cube>(nd,p,K);
   arma::mat nu_all     = arma::zeros<arma::mat>(nd,p);
 
-  /*
-   * test sample
-   */
-  bool test = sum(np) > 0;
-  std::vector<double*> fhattest(K);
   //random number generation LH: May need to be modified
   //unsigned int n1=111; // additional parameters needed to call from C++
   //unsigned int n2=222;
@@ -265,10 +238,11 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   // sigma
   std::vector<double*> svec(K);
   std::vector<double>  probvec(p);
+
   /*
    * set parameters
    */
-  std::vector<heterbart>  mul_bart(K); // std::array<std::array<heterbart, K>, p-1>
+  std::vector<heterbart>  mul_bart(K);
   for(size_t k=0; k<K; k++){
     mul_bart[k].setm(m);
 
@@ -313,8 +287,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     svec[k] = new double[n[k]];
     for(size_t j=0;j<n[k];j++)  svec[k][j] = mul_bart[k].getw(j)*sigma[k];
 
-    //delete[] iy;
-    //delete[] ix;
   }
 
   std::vector<double> ivarprb (p,0.);
@@ -368,27 +340,27 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
             //Rprintf("adjprob:%.4f\n", adjprob);
           }
           adj_prop = 1.-adj(l,k);
+
           if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
 
           diffg        = adj_prop - adj(l,k);
-          adj_sum       = arma::accu( adj.col(k));
-          alpha_sum     = adj_sum*adj_alpha1 + (p-adj_sum)*adj_alpha0;
-          alpha_sum_star= alpha_sum + diffg*(adj_alpha1 - adj_alpha0);
-          //prob_prop    = (alpha_adj*prob_prop + 1.)/(alpha_adj+1.);
-          //prob1        = (alpha_adj*adj.col(k) + 1.)/(alpha_adj+1.);
+          prob_prop    = adj.col(k);
+          prob_prop(l) = adj_prop;
+          prob_prop    = (alpha_adj*prob_prop + 1.)/(alpha_adj+1.);
+          prob1        = (alpha_adj*adj.col(k) + 1.)/(alpha_adj+1.);
 
           //MH
-          log_ar = diffg*adjprobtmp +
-            lgamma(alpha_sum_star) - lgamma(alpha_sum) +
-            lgamma(adj_alpha1*adj(l, k) + (1.-adj(l, k))*adj_alpha0) -
-            lgamma(adj_alpha1*adj_prop + (1.-adj_prop)*adj_alpha0) +
-            diffg*(adj_alpha1 - adj_alpha0)*std::log(ivarprb[l]);
+          sumtmp1 =  diffg*adjprobtmp +
+            lgamma(arma::accu(prob_prop)) - lgamma(arma::accu(prob1)) +
+            lgamma(prob1(l)) - lgamma(prob_prop(l)) +
+            (prob_prop(l) - prob1(l))*std::log(ivarprb[l]);
 
-          //log_ar  = sumtmp1;
+          log_ar  = sumtmp1;
           if(false && k == 3 && l == 10 && iter % 1000 == 0)
             Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
-                    diffg, adjprobtmp, log_ar, adj_sum ,alpha_sum_star,
-                    ivarprb[l], ivarcnt[l], totalcnt);
+                    log_ar, arma::accu(prob_prop),arma::accu(prob1),
+                    prob_prop(l),prob1(l), ivarprb[l],
+                                                  ivarcnt[l], totalcnt);
 
           if( log_ar > std::log(R::runif(0.0,1.0))){
             adj(l,k)  = adj_prop;
@@ -397,8 +369,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
         }
 
         for(size_t j=0;j<p;j++){
-          probvec[j] = adj_alpha1*adj(j, k) + (1-adj(j, k))*adj_alpha0 +
-            (double)ivarcnt[j];
+          probvec[j] = (alpha_adj*adj(j, k) + 1.)/(alpha_adj+1.) + (double)ivarcnt[j];
         }
         if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         probvec    = gen.log_dirichlet(probvec);
@@ -427,20 +398,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
 
       if(iter >= burn){
         for(size_t j=0;j<n[k];j++) trdraw(iter-burn, j, k)+= mul_bart[k].f(j);
-        //Rprintf("trdraw %.4f \n", trdraw(iter-burn, 20, k));
-        /*
-         * prediction
-         */
-        if(test){
-          NumericVector xv(as<NumericVector>(xp[k]));
-          double *ix = &xv[0];
-          //Rprintf("ix %.4f \n", *ix);
-          double *fhattest = new double[np[k]];
-          mul_bart[k].predict(p, np[k], ix, fhattest);
-          for(size_t j=0;j<np[k];j++) tedraw(iter-burn, j, k)+= fhattest[j];
-          delete[] fhattest;
-          //Rprintf("tedraw %.4f \n", tedraw(iter-burn, 20, k));
-        }
+        //Rprintf("trdraw %f \n", trdraw(iter-burn, 20, k));
+
         size_t iter2=(iter-burn);
         for(size_t j=0;j<p;j++){
           varcnt(iter2, j, k)=ivarcnt[j];
@@ -484,7 +443,6 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   ret["sigma"]=sdraw;
   //ret["yhat.train.mean"]=trmean;
   ret["yhat.train"]=trdraw;
-  ret["yhat.test"]=tedraw;
   //ret["varcount"]=varcount;
   ret["varcount"]=varcnt;
   ret["varprob"]=varprb;

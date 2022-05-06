@@ -37,7 +37,8 @@ JointWBart=function(
   ndpost=1000L,
   nskip=100L,
   transposed=FALSE,
-  alpha_adj = 10,
+  adj_alpha0=0.05,
+  adj_alpha1=1.,
   Joint = T
 )
 {
@@ -169,7 +170,8 @@ JointWBart=function(
               my_w,
               graph_a,
               graph_b,
-              alpha_adj,
+              adj_alpha0,
+              adj_alpha1,
               Joint
   )
 
@@ -177,9 +179,14 @@ JointWBart=function(
 
   res$mu = fmean
   res$yhat.train.mean = list()
+  res$yhat.test.mean = list()
+
   for(k in 1:K){
     res$yhat.train[,,k] = res$yhat.train[,1:n[k],k]+fmean[[k]]
     res$yhat.train.mean[[k]] = apply(res$yhat.train[,,k],2, mean)
+
+    res$yhat.test[,,k] = res$yhat.test[,1:np[k],k]+fmean[[k]]
+    res$yhat.test.mean[[k]] = apply(res$yhat.test[,,k],2, mean)
   }
   #res$yhat.train.mean = res$yhat.train.mean+fmean
   #res$yhat.train = res$yhat.train+fmean
