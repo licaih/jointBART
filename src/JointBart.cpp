@@ -362,13 +362,13 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
           // adjprob    = std::exp(adjprobtmp);
           // adjprob    = adjprob/(1.+adjprob);
 
-          if(false && k == 3 && l == 10 && iter % 1000 == 0){
-            Rprintf("adjprobtmp:%.4f\n", adjprobtmp);
-            //Rprintf("curr_prob :%.4f\n", prob(l,k));
-            //Rprintf("adjprob:%.4f\n", adjprob);
-          }
+          // if(false && k == 3 && l == 10 && iter % 1000 == 0){
+          //   Rprintf("adjprobtmp:%.4f\n", adjprobtmp);
+          //   //Rprintf("curr_prob :%.4f\n", prob(l,k));
+          //   //Rprintf("adjprob:%.4f\n", adjprob);
+          // }
           adj_prop = 1.-adj(l,k);
-          if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
+          //if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("adj_propose:%.4f\n", adj_prop);
 
           diffg        = adj_prop - adj(l,k);
           adj_sum       = arma::accu( adj.col(k));
@@ -385,14 +385,14 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
             diffg*(adj_alpha1 - adj_alpha0)*std::log(ivarprb[l]);
 
           //log_ar  = sumtmp1;
-          if(false && k == 3 && l == 10 && iter % 1000 == 0)
-            Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
-                    diffg, adjprobtmp, log_ar, adj_sum ,alpha_sum_star,
-                    ivarprb[l], ivarcnt[l], totalcnt);
+          // if(false && k == 3 && l == 10 && iter % 1000 == 0)
+          //   Rprintf("log_ar:%.4f--, %.4f, %.4f, %.4f, %.4f, %.4f, cnt:%d, total:%d \n",
+          //           diffg, adjprobtmp, log_ar, adj_sum ,alpha_sum_star,
+          //           ivarprb[l], ivarcnt[l], totalcnt);
 
           if( log_ar > std::log(R::runif(0.0,1.0))){
             adj(l,k)  = adj_prop;
-            if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
+            //if(false && k == 3 && l == 10 && iter % 1000 == 0) Rprintf("--------accept!!!\n");
           }
         }
 
@@ -400,11 +400,11 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
           probvec[j] = adj_alpha1*adj(j, k) + (1-adj(j, k))*adj_alpha0 +
             (double)ivarcnt[j];
         }
-        if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        //if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         probvec    = gen.log_dirichlet(probvec);
-        if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
+        //if(false && k == 3 &&iter % 1000 == 0) Rprintf("--------------------probvec:%.4e!!!\n", probvec[10]);
         for(size_t j=0;j<p;j++) probvec[j] = std::exp(probvec[j]);
-        if(false && k == 3 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
+        //if(false && k == 3 && iter % 1000 == 0) Rprintf("--------------------prob11:%.4e!!!\n", probvec[10]);
         //prob1   = prob.col(k);
         //probvec = arma::conv_to<std::vector<double>>::from(prob1);
         // update prob vector
