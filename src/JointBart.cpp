@@ -161,7 +161,7 @@ void up_nu(arma::vec& nu,
            const double& b,
            const arma::mat& B,
            arma::vec& accep_nu){
-  double a_prop = 1.0, b_prop = 6.0;
+  double a_prop = 1.0, b_prop = 2.0;
   double qu, nu_prop, log_ar;
   size_t p = nu.n_elem;
 

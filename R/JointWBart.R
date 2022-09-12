@@ -186,7 +186,7 @@ JointWBart=function(
     res$yhat.train.mean[[k]] = apply(res$yhat.train[,,k],2, mean)[1:n[k]]
     if(np[k]!=0){
       res$yhat.test[,1:np[k],k] = res$yhat.test[,1:np[k],k]+fmean[[k]]
-      res$yhat.test.mean[[k]] = apply(res$yhat.test[,,k],2, mean)[1:n[k]]
+      res$yhat.test.mean[[k]] = apply(res$yhat.test[,,k],2, mean)[1:np[k]]
     }
   }
   #res$yhat.train.mean = res$yhat.train.mean+fmean
