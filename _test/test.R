@@ -108,13 +108,13 @@ Theta[1,2] = Theta[2,1] = .1
 adj   = matrix(rbinom(p*K, 1, 0), p, 3)
 graph_nu = rgamma(p, 4, 2)
 res = JointPBart(x.train, y.train,
-                 Theta, adj, graph_nu, graph_alpha = 0.5,
-                 graph_beta=0.5, my_w = 0.1, graph_a = 4, graph_b = 2,
+                 Theta, adj, graph_nu, graph_alpha = 1,
+                 graph_beta=1, my_w = 0.1, graph_a = 9, graph_b = 1,
                  x.test=vector("list", length(y.train)),
                  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
                  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
                  rm.const=TRUE, bk=2.0, power=2.0, base=.95,
-                 ntree=10L, numcut=100, ndpost=10L,
+                 ntree=10L, numcut=100, ndpost=10000L,
                  nskip=100L, transposed=FALSE, )
 
 pip = apply(res$varcount>0, c(3,2), mean)
@@ -128,10 +128,5 @@ legend("topright", legend = 1:3, pch = 21:23)
 pip
 apply(res$varcount, c(3,2), mean)
 
-plot(y[[1]], apply(res$yhat.train[,1:n[1],1],2,mean))
-abline(0,1,col = 2)
-plot(y[[2]], apply(res$yhat.train[,1:n[2],2],2,mean))
-abline(0,1,col = 2)
-plot(y[[3]], apply(res$yhat.train[,1:n[3],3],2,mean))
-abline(0,1,col = 2)
+
 

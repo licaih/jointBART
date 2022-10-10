@@ -626,17 +626,17 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
      for(size_t j=0; j<n[k]; j++) {
        if(iy[j]==0) iz[k][j]= -rtnorm(0., binaryOffset[k], 1., gen);
        else iz[k][j]=rtnorm(0., -binaryOffset[k], 1., gen);
-       Rprintf("iz[%d][%d]: %.4f\n", k,j, iz[k][j]);
+       //Rprintf("iz[%d][%d]: %.4f\n", k,j, iz[k][j]);
 
        /*
         if(iy[k]==0) iz[k]= -r_lefttruncnorm(0., binaryOffset, 1., gen);
         else iz[k]=r_lefttruncnorm(0., -binaryOffset, 1., gen);
         */
      } //*pbart*//
-     Rprintf("binaryOffset %.4f",  binaryOffset[k]);
-     Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n", k, iz[k][0], iz[k][n[k]-1]);
+     //Rprintf("binaryOffset %.4f",  binaryOffset[k]);
+     //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n", k, iz[k][0], iz[k][n[k]-1]);
      mul_bart[k].setdata(p,n[k],ix,iz[k],numcut); //*pbart*// iy changed to iz (latent)
-     Rprintf("yv[k]: %.4f, yv[n[k]-1]: %.4f\n", yv[0], yv[n[k]-1]);
+     //Rprintf("yv[k]: %.4f, yv[n[k]-1]: %.4f\n", yv[0], yv[n[k]-1]);
      //mul_bart[k].pr();
 
      //std::vector<double> wv(as<std::vector<double>>(w[k]));
