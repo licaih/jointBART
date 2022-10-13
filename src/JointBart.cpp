@@ -576,13 +576,13 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
 
   arn gen; // ?????
   // sigma
-  // std::vector<double*> svec(K);
+  std::vector<double*> svec(K);
   std::vector<double*> iz(K); //**pbart**//
   std::vector<double>  probvec(p);
   /*
    * set parameters
    */
-  std::vector<bart>  mul_bart(K); // /**pbart** heterbart -> bart//
+  std::vector<heterbart>  mul_bart(K); // /**pbart** heterbart -> bart//
   for(size_t k=0; k<K; k++){
     mul_bart[k].setm(m);
 
@@ -603,7 +603,8 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
 
       mul_bart[k].setxinfo(_xi);
     }
-
+    svec[k] = new double[n[k]];
+    for(size_t j=0;j<n[k];j++)  svec[k][j] = 1.;
     /*
      * set other parameters
      */
@@ -653,6 +654,14 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
   std::vector<size_t> ivarcnt (p,0);
   /*std::stringstream treess;  //string stream to write trees to
    treess.precision(10);*/
+  //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",1, iz[0][0], iz[0][n[0]-1]);
+  //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",2, iz[1][0], iz[1][n[1]-1]);
+  //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",3, iz[2][0], iz[2][n[2]-1]);
+  //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",4, iz[3][0], iz[3][n[3]-1]);
+  //Rprintf("mul_bart[%d][0]: %.4f, mul_bart[k][n[k]-1]: %.4f\n",1, mul_bart[0].gety(0), mul_bart[0].gety(n[0]-1));
+  //Rprintf("mul_bart[%d][0]: %.4f, mul_bart[k][n[k]-1]: %.4f\n",2, mul_bart[1].gety(0), mul_bart[1].gety(n[1]-1));
+  //Rprintf("mul_bart[%d][0]: %.4f, mul_bart[k][n[k]-1]: %.4f\n",3, mul_bart[2].gety(0), mul_bart[2].gety(n[2]-1));
+  // Rprintf("mul_bart[%d][0]: %.4f, mul_bart[k][n[k]-1]: %.4f\n",4, mul_bart[3].gety(0), mul_bart[4].gety(n[3]-1));
 
   /*
    * MCMC
@@ -745,7 +754,9 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
       /*
        * Probit model  pbart
        */
-      mul_bart[k].draw(1., gen); //**// line299
+      //mul_bart[k].pr();
+      mul_bart[k].draw(svec[k], gen); //**// line299
+      //mul_bart[k].pr();
       // rss=0.0,restemp=0.0;
       // for(size_t j=0; j<n[k]; j++){
       //   restemp=((mul_bart[k].gety(j))-mul_bart[k].f(j))/(mul_bart[k].getw(j));
@@ -767,7 +778,9 @@ List JointBartB(const IntegerVector& n, // vector of sample sizes in train
          else iz[k]=r_lefttruncnorm(bm.f(k), -binaryOffset, 1., gen);
          */
       }
-      Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",k, iz[k][0], iz[k][n[k]-1]);
+      //Rprintf("iz[%d][0]: %.4f, iz[k][n[k]-1]: %.4f\n",k, iz[k][0], iz[k][n[k]-1]);
+      //Rprintf("mul_bartf[%d][0]: %.4f, mul_bartf[k][n[k]-1]: %.4f\n",k, mul_bart[k].f(0), mul_bart[k].f(n[k]-1));
+      //Rprintf("mul_bart[%d][0]: %.4f, mul_bart[k][n[k]-1]: %.4f\n",k, mul_bart[k].gety(0), mul_bart[k].gety(n[k]-1));
 
       ivarcnt = mul_bart[k].getnv();
       ivarprb  = mul_bart[k].getpv();

@@ -106,16 +106,16 @@ Theta[2,3] = Theta[3,2] = .1
 Theta[1,3] = Theta[3,1] = .1
 Theta[1,2] = Theta[2,1] = .1
 adj   = matrix(rbinom(p*K, 1, 0), p, 3)
-graph_nu = rgamma(p, 4, 2)
+graph_nu = rep(-2.2,p)
 res = JointPBart(x.train, y.train,
-                 Theta, adj, graph_nu, graph_alpha = 1,
-                 graph_beta=1, my_w = 0.1, graph_a = 9, graph_b = 1,
+                 Theta, adj, graph_nu, graph_alpha = 2,
+                 graph_beta=5, my_w = 0.5, graph_a = 1, graph_b = 9,
                  x.test=vector("list", length(y.train)),
                  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
                  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
                  rm.const=TRUE, bk=2.0, power=2.0, base=.95,
-                 ntree=10L, numcut=100, ndpost=10000L,
-                 nskip=100L, transposed=FALSE, )
+                 ntree=20L, numcut=100, ndpost=1e4,
+                 nskip=1e4, transposed=FALSE,Joint = T )
 
 pip = apply(res$varcount>0, c(3,2), mean)
 col = c(rep(2, 5), rep(1, p-5))

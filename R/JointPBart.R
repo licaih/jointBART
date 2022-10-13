@@ -126,7 +126,7 @@ JointPBart=function(
         power,
         base,
         binaryOffset,
-        3/(bk*sqrt(ntree)), #tau
+        rep(3/(bk*sqrt(ntree)),K), #tau
         sparse,
         theta,
         omega,
