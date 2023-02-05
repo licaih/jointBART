@@ -21,7 +21,7 @@ f = function(x){
 }
 sigma = 1.0  #y = f(x) + sigma*z , z~N(0,1)
 n = c(100, 100, 100)
-p = 50
+p = 200
 # set.seed(2022)
 x  = list(matrix(runif(n[1]*p),n[1],p),
           matrix(runif(n[2]*p),n[2],p),
@@ -50,8 +50,8 @@ res = JointWBart(x.train, y.train,
   xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
   rm.const=TRUE, sigest=NA, sigdf=3, sigquant=.90, bk=2.0, power=2.0, base=.95,
   sigmaf=NA, lambda=NA, fmean=lapply(y.train, mean),
-  w=lapply(n, function(n1) rep(1,n1)),  ntree=10L, numcut=100, ndpost=10000L,
-  nskip=100L, transposed=FALSE
+  w=lapply(n, function(n1) rep(1,n1)),  ntree=10L, numcut=100, ndpost=2L,
+  nskip=1000L, transposed=FALSE
 )
 
 pip = apply(res$varcount>0, c(3,2), mean)
@@ -109,7 +109,7 @@ adj   = matrix(rbinom(p*K, 1, 0), p, 3)
 graph_nu = rep(-2.2,p)
 res = JointPBart(x.train, y.train,
                  Theta, adj, graph_nu, graph_alpha = 2,
-                 graph_beta=5, my_w = 0.5, graph_a = 1, graph_b = 9,
+                 graph_beta=5, my_w = 0.5, graph_a = 1, graph_b = 19,
                  x.test=vector("list", length(y.train)),
                  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
                  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
@@ -128,5 +128,6 @@ legend("topright", legend = 1:3, pch = 21:23)
 pip
 apply(res$varcount, c(3,2), mean)
 
+q("no")
 
 
