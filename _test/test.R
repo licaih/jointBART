@@ -44,16 +44,8 @@ adj   = matrix(rbinom(p*K, 1, 0), p, 3)
 graph_nu = rgamma(p, 4, 2)
 res = JointWBart(x.train, y.train,
                  Theta, adj, graph_nu, graph_alpha = 0.5,
-                 graph_beta=0.5, my_w = 0.1, graph_a = 4, graph_b = 2,
-                 x.test=vector("list", length(y.train)),
-  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
-  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
-  rm.const=TRUE, sigest=NA, sigdf=3, sigquant=.90, bk=2.0, power=2.0, base=.95,
-  sigmaf=NA, lambda=NA, fmean=lapply(y.train, mean),
-  w=lapply(n, function(n1) rep(1,n1)),  ntree=10L, numcut=100, ndpost=2L,
-  nskip=1000L, transposed=FALSE
-)
-
+                 graph_beta=0.5, my_w = 0.1, graph_a = 4, graph_b = 2)
+hist(res$treesizes)
 pip = apply(res$varcount>0, c(3,2), mean)
 col = c(rep(2, 5), rep(1, p-5))
 plot(pip[1,],  ylim =c(0,1), col = col, pch = 21)

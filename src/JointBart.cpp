@@ -223,7 +223,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
                const double& graph_b,
                double& adj_alpha0,
                double& adj_alpha1,
-               const bool& Joint){
+               const bool& Joint,
+               const bool& showJoinPara){
 
   /*
    * initialize varaible
@@ -252,6 +253,8 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   arma::cube theta_all = arma::zeros<arma::cube>(nd,K,K);
   arma::cube adj_all   = arma::zeros<arma::cube>(nd,p,K);
   arma::mat nu_all     = arma::zeros<arma::mat>(nd,p);
+
+  arma::cube ntreesize = arma::zeros<arma::cube>(nd+burn, K, m); // print tree sizes
 
   /*
    * test sample
@@ -304,7 +307,7 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
 
     mul_bart[k].setprior(alpha,mybeta,tau[k]);
     mul_bart[k].setdata(p,n[k],ix,iy,numcut);
-    mul_bart[k].setdart(a,b,rho,aug,dart,theta,omega); // can be removed
+    //mul_bart[k].setdart(a,b,rho,aug,dart,theta,omega); // can be removed
 
     //mul_bart[k].pr();
 
@@ -426,6 +429,9 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
       ivarcnt = mul_bart[k].getnv();
       ivarprb  = mul_bart[k].getpv();
 
+      for(size_t mi=0;mi<m;mi++)
+        ntreesize.at(iter, k, mi) = mul_bart[k].gettree(mi).treesize();
+
       if(iter >= burn){
         for(size_t j=0;j<n[k];j++) trdraw(iter-burn, j, k)+= mul_bart[k].f(j);
         //Rprintf("trdraw %.4f \n", trdraw(iter-burn, 20, k));
@@ -456,12 +462,13 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
     /*
      * reladeness
      */
-    if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha, graph_beta, my_w,
-       B, accep_gamma, accep_theta, within_model);
+    if(Joint && iter > burn/2) up_relatedness(adj, Theta, graph_nu, graph_alpha,
+       graph_beta, my_w,B, accep_gamma, accep_theta, within_model);
     /*
      * edge-specific
      */
-    if(Joint && iter > burn/2) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B, accep_nu);
+    if(Joint && iter > burn/2) up_nu(graph_nu, adj, Theta, graph_a, graph_b, B,
+       accep_nu);
 
     //record nu, adj, Theta
     if(iter >= burn && Joint){
@@ -492,10 +499,13 @@ List JointBart(const IntegerVector& n, // vector of sample sizes in train
   if(Joint){
     ret["theta_all"]=theta_all;
     ret["adj_all"]=adj_all;
-    ret["nu_all"]=nu_all;
-    ret["accep_gamma"] = accep_gamma;
-    ret["accep_nu"] = accep_nu;
-    ret["accep_theta"] = accep_theta;
+    if(showJoinPara){
+      ret["nu_all"]=nu_all;
+      ret["accep_gamma"] = accep_gamma;
+      ret["accep_nu"] = accep_nu;
+      ret["accep_theta"] = accep_theta;
+      ret["treesizes"] = ntreesize;
+    }
   }
   return ret;
 }

@@ -13,12 +13,8 @@ up_nu <- function(nu, adj, Theta, a, b, B, accep_nu) {
     invisible(.Call(`_jointBART_up_nu`, nu, adj, Theta, a, b, B, accep_nu))
 }
 
-JointBart <- function(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint) {
-    .Call(`_jointBART_JointBart`, n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint)
-}
-
-JointBartB <- function(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, binaryOffset, tau, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint) {
-    .Call(`_jointBART_JointBartB`, n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, binaryOffset, tau, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint)
+JointBart <- function(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint, showJoinPara) {
+    .Call(`_jointBART_JointBart`, n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint, showJoinPara)
 }
 
 rcpp_hello <- function() {
