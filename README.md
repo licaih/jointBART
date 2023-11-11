@@ -1,4 +1,4 @@
-# jointBART
+# Joint Bayesian Additive Regression Tree
 
 Joint Bayesian Additive Regression Tree (JointBART) is a general and flexible model for nonlinear joint graph
 inference that is well-suited for complex distributions of genomic data.
