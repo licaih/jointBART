@@ -39,8 +39,7 @@ JointWBart=function(
   transposed=FALSE,
   adj_alpha0=0.05,
   adj_alpha1=1.,
-  Joint = T,
-  showJoinPara = T
+  Joint = T
 )
 {
   #--------------------------------------------------
@@ -173,8 +172,7 @@ JointWBart=function(
               graph_b,
               adj_alpha0,
               adj_alpha1,
-              Joint,
-              showJoinPara
+              Joint
   )
 
   res$proc.time <- proc.time()-ptm

@@ -60,8 +60,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // JointBart
-List JointBart(const IntegerVector& n, const size_t& p, const IntegerVector& np, const List& x, const List& y, const List& xp, const size_t& m, IntegerVector& nc, const size_t& nd, const size_t& burn, const double& mybeta, const double& alpha, NumericVector& tau, NumericVector& nu, NumericVector& lambda, NumericVector& sigma, const List& w, const bool& dart, const double& theta, const double& omega, IntegerVector& igrp, const double& a, const double& b, const double& rho, const bool& aug, const List& iXinfo, arma::mat& Theta, arma::mat& adj, arma::vec& graph_nu, const arma::mat& B, const double& graph_alpha, const double& graph_beta, const double& my_w, const double& graph_a, const double& graph_b, double& adj_alpha0, double& adj_alpha1, const bool& Joint, const bool& showJoinPara);
-RcppExport SEXP _jointBART_JointBart(SEXP nSEXP, SEXP pSEXP, SEXP npSEXP, SEXP xSEXP, SEXP ySEXP, SEXP xpSEXP, SEXP mSEXP, SEXP ncSEXP, SEXP ndSEXP, SEXP burnSEXP, SEXP mybetaSEXP, SEXP alphaSEXP, SEXP tauSEXP, SEXP nuSEXP, SEXP lambdaSEXP, SEXP sigmaSEXP, SEXP wSEXP, SEXP dartSEXP, SEXP thetaSEXP, SEXP omegaSEXP, SEXP igrpSEXP, SEXP aSEXP, SEXP bSEXP, SEXP rhoSEXP, SEXP augSEXP, SEXP iXinfoSEXP, SEXP ThetaSEXP, SEXP adjSEXP, SEXP graph_nuSEXP, SEXP BSEXP, SEXP graph_alphaSEXP, SEXP graph_betaSEXP, SEXP my_wSEXP, SEXP graph_aSEXP, SEXP graph_bSEXP, SEXP adj_alpha0SEXP, SEXP adj_alpha1SEXP, SEXP JointSEXP, SEXP showJoinParaSEXP) {
+List JointBart(const IntegerVector& n, const size_t& p, const IntegerVector& np, const List& x, const List& y, const List& xp, const size_t& m, IntegerVector& nc, const size_t& nd, const size_t& burn, const double& mybeta, const double& alpha, NumericVector& tau, NumericVector& nu, NumericVector& lambda, NumericVector& sigma, const List& w, const bool& dart, const double& theta, const double& omega, IntegerVector& igrp, const double& a, const double& b, const double& rho, const bool& aug, const List& iXinfo, arma::mat& Theta, arma::mat& adj, arma::vec& graph_nu, const arma::mat& B, const double& graph_alpha, const double& graph_beta, const double& my_w, const double& graph_a, const double& graph_b, double& adj_alpha0, double& adj_alpha1, const bool& Joint);
+RcppExport SEXP _jointBART_JointBart(SEXP nSEXP, SEXP pSEXP, SEXP npSEXP, SEXP xSEXP, SEXP ySEXP, SEXP xpSEXP, SEXP mSEXP, SEXP ncSEXP, SEXP ndSEXP, SEXP burnSEXP, SEXP mybetaSEXP, SEXP alphaSEXP, SEXP tauSEXP, SEXP nuSEXP, SEXP lambdaSEXP, SEXP sigmaSEXP, SEXP wSEXP, SEXP dartSEXP, SEXP thetaSEXP, SEXP omegaSEXP, SEXP igrpSEXP, SEXP aSEXP, SEXP bSEXP, SEXP rhoSEXP, SEXP augSEXP, SEXP iXinfoSEXP, SEXP ThetaSEXP, SEXP adjSEXP, SEXP graph_nuSEXP, SEXP BSEXP, SEXP graph_alphaSEXP, SEXP graph_betaSEXP, SEXP my_wSEXP, SEXP graph_aSEXP, SEXP graph_bSEXP, SEXP adj_alpha0SEXP, SEXP adj_alpha1SEXP, SEXP JointSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -103,8 +103,52 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double& >::type adj_alpha0(adj_alpha0SEXP);
     Rcpp::traits::input_parameter< double& >::type adj_alpha1(adj_alpha1SEXP);
     Rcpp::traits::input_parameter< const bool& >::type Joint(JointSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type showJoinPara(showJoinParaSEXP);
-    rcpp_result_gen = Rcpp::wrap(JointBart(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint, showJoinPara));
+    rcpp_result_gen = Rcpp::wrap(JointBart(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, tau, nu, lambda, sigma, w, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint));
+    return rcpp_result_gen;
+END_RCPP
+}
+// JointBartB
+List JointBartB(const IntegerVector& n, const size_t& p, const IntegerVector& np, const List& x, const List& y, const List& xp, const size_t& m, IntegerVector& nc, const size_t& nd, const size_t& burn, const double& mybeta, const double& alpha, NumericVector& binaryOffset, NumericVector& tau, const bool& dart, const double& theta, const double& omega, IntegerVector& igrp, const double& a, const double& b, const double& rho, const bool& aug, const List& iXinfo, arma::mat& Theta, arma::mat& adj, arma::vec& graph_nu, const arma::mat& B, const double& graph_alpha, const double& graph_beta, const double& my_w, const double& graph_a, const double& graph_b, double& adj_alpha0, double& adj_alpha1, const bool& Joint);
+RcppExport SEXP _jointBART_JointBartB(SEXP nSEXP, SEXP pSEXP, SEXP npSEXP, SEXP xSEXP, SEXP ySEXP, SEXP xpSEXP, SEXP mSEXP, SEXP ncSEXP, SEXP ndSEXP, SEXP burnSEXP, SEXP mybetaSEXP, SEXP alphaSEXP, SEXP binaryOffsetSEXP, SEXP tauSEXP, SEXP dartSEXP, SEXP thetaSEXP, SEXP omegaSEXP, SEXP igrpSEXP, SEXP aSEXP, SEXP bSEXP, SEXP rhoSEXP, SEXP augSEXP, SEXP iXinfoSEXP, SEXP ThetaSEXP, SEXP adjSEXP, SEXP graph_nuSEXP, SEXP BSEXP, SEXP graph_alphaSEXP, SEXP graph_betaSEXP, SEXP my_wSEXP, SEXP graph_aSEXP, SEXP graph_bSEXP, SEXP adj_alpha0SEXP, SEXP adj_alpha1SEXP, SEXP JointSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerVector& >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const size_t& >::type p(pSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type np(npSEXP);
+    Rcpp::traits::input_parameter< const List& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const List& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const List& >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< const size_t& >::type m(mSEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type nc(ncSEXP);
+    Rcpp::traits::input_parameter< const size_t& >::type nd(ndSEXP);
+    Rcpp::traits::input_parameter< const size_t& >::type burn(burnSEXP);
+    Rcpp::traits::input_parameter< const double& >::type mybeta(mybetaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type binaryOffset(binaryOffsetSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type dart(dartSEXP);
+    Rcpp::traits::input_parameter< const double& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type omega(omegaSEXP);
+    Rcpp::traits::input_parameter< IntegerVector& >::type igrp(igrpSEXP);
+    Rcpp::traits::input_parameter< const double& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const double& >::type b(bSEXP);
+    Rcpp::traits::input_parameter< const double& >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type aug(augSEXP);
+    Rcpp::traits::input_parameter< const List& >::type iXinfo(iXinfoSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type Theta(ThetaSEXP);
+    Rcpp::traits::input_parameter< arma::mat& >::type adj(adjSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type graph_nu(graph_nuSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const double& >::type graph_alpha(graph_alphaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type graph_beta(graph_betaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type my_w(my_wSEXP);
+    Rcpp::traits::input_parameter< const double& >::type graph_a(graph_aSEXP);
+    Rcpp::traits::input_parameter< const double& >::type graph_b(graph_bSEXP);
+    Rcpp::traits::input_parameter< double& >::type adj_alpha0(adj_alpha0SEXP);
+    Rcpp::traits::input_parameter< double& >::type adj_alpha1(adj_alpha1SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type Joint(JointSEXP);
+    rcpp_result_gen = Rcpp::wrap(JointBartB(n, p, np, x, y, xp, m, nc, nd, burn, mybeta, alpha, binaryOffset, tau, dart, theta, omega, igrp, a, b, rho, aug, iXinfo, Theta, adj, graph_nu, B, graph_alpha, graph_beta, my_w, graph_a, graph_b, adj_alpha0, adj_alpha1, Joint));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -125,7 +169,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_jointBART_mrf_C", (DL_FUNC) &_jointBART_mrf_C, 3},
     {"_jointBART_up_relatedness", (DL_FUNC) &_jointBART_up_relatedness, 10},
     {"_jointBART_up_nu", (DL_FUNC) &_jointBART_up_nu, 7},
-    {"_jointBART_JointBart", (DL_FUNC) &_jointBART_JointBart, 39},
+    {"_jointBART_JointBart", (DL_FUNC) &_jointBART_JointBart, 38},
+    {"_jointBART_JointBartB", (DL_FUNC) &_jointBART_JointBartB, 35},
     {"_jointBART_rcpp_hello", (DL_FUNC) &_jointBART_rcpp_hello, 0},
     {"cwbart", (DL_FUNC) &cwbart, 31},
     {NULL, NULL, 0}

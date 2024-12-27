@@ -21,7 +21,7 @@ f = function(x){
 }
 sigma = 1.0  #y = f(x) + sigma*z , z~N(0,1)
 n = c(100, 100, 100)
-p = 200
+p = 50
 # set.seed(2022)
 x  = list(matrix(runif(n[1]*p),n[1],p),
           matrix(runif(n[2]*p),n[2],p),
@@ -44,8 +44,16 @@ adj   = matrix(rbinom(p*K, 1, 0), p, 3)
 graph_nu = rgamma(p, 4, 2)
 res = JointWBart(x.train, y.train,
                  Theta, adj, graph_nu, graph_alpha = 0.5,
-                 graph_beta=0.5, my_w = 0.1, graph_a = 4, graph_b = 2)
-hist(res$treesizes)
+                 graph_beta=0.5, my_w = 0.1, graph_a = 4, graph_b = 2,
+                 x.test=vector("list", length(y.train)),
+  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
+  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
+  rm.const=TRUE, sigest=NA, sigdf=3, sigquant=.90, bk=2.0, power=2.0, base=.95,
+  sigmaf=NA, lambda=NA, fmean=lapply(y.train, mean),
+  w=lapply(n, function(n1) rep(1,n1)),  ntree=10L, numcut=100, ndpost=10000L,
+  nskip=100L, transposed=FALSE
+)
+
 pip = apply(res$varcount>0, c(3,2), mean)
 col = c(rep(2, 5), rep(1, p-5))
 plot(pip[1,],  ylim =c(0,1), col = col, pch = 21)
@@ -94,20 +102,20 @@ K
 
 x.train = x; y.train = y;
 Theta = matrix(0, 3, 3)
-Theta[2,3] = Theta[3,2] = .1
-Theta[1,3] = Theta[3,1] = .1
-Theta[1,2] = Theta[2,1] = .1
+Theta[2,3] = Theta[3,2] = 1
+Theta[1,3] = Theta[3,1] = 1
+Theta[1,2] = Theta[2,1] = 1
 adj   = matrix(rbinom(p*K, 1, 0), p, 3)
-graph_nu = rep(-2.2,p)
+graph_nu = rep(0,p)
 res = JointPBart(x.train, y.train,
-                 Theta, adj, graph_nu, graph_alpha = 2,
-                 graph_beta=5, my_w = 0.5, graph_a = 1, graph_b = 19,
+                 Theta, adj, graph_nu, graph_alpha = 1,
+                 graph_beta=4, my_w = 0.5, graph_a = 1, graph_b = 9,
                  x.test=vector("list", length(y.train)),
                  sparse=FALSE, theta=0, omega=1, a=0.5, b=1, augment=FALSE, rho=NULL,
                  xinfo=vector("list", length(y.train)), usequants=FALSE, cont=FALSE,
                  rm.const=TRUE, bk=2.0, power=2.0, base=.95,
-                 ntree=20L, numcut=100, ndpost=1e4,
-                 nskip=1e4, transposed=FALSE,Joint = T )
+                 ntree=20L, numcut=100, ndpost=10000L,
+                 nskip=100L, transposed=FALSE, )
 
 pip = apply(res$varcount>0, c(3,2), mean)
 col = c(rep(2, 5), rep(1, p-5))
@@ -120,6 +128,5 @@ legend("topright", legend = 1:3, pch = 21:23)
 pip
 apply(res$varcount, c(3,2), mean)
 
-q("no")
 
 
